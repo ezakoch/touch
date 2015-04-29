@@ -2,8 +2,6 @@
 #include "m_usb.h"
 #include "base64.h"
 
-char base64_output[MAX_BASE64_LEN + 1];
-
 const char base64_err_str[] PROGMEM = "!BASE64!";
 
 const char base64_chars[64] PROGMEM =
@@ -22,6 +20,12 @@ inline char base64_char_from_byte (const uint8_t byte)
 {
 	return pgm_read_byte (base64_chars + (byte & 0b00111111));
 }
+
+
+
+#ifdef BASE64_ENCODING
+
+char base64_encoded_output[MAX_BASE64_LEN + 1];
 
 static void encode_triplet (const uint8_t *input, uint8_t *output)
 {
@@ -105,15 +109,17 @@ void base64_encode (const uint8_t *input, const uint16_t len)
 	base64_output_ptr[4] = '\0';
 }
 
+
+
 static uint8_t buffered_bytes = 0;
 static uint8_t bytes[3];
 
-void base64_begin_stream (void)
+void base64_begin_encode_stream (void)
 {
 	buffered_bytes = 0;
 }
 
-void base64_stream (const uint8_t *input, const uint16_t len)
+void base64_encode_stream (const uint8_t *input, const uint16_t len)
 {
 	if (len == 0)
 		return;
@@ -137,7 +143,7 @@ void base64_stream (const uint8_t *input, const uint16_t len)
 	}
 }
 
-void base64_end_stream (void)
+void base64_end_encode_stream (void)
 {
 	uint8_t output[3];
 	
@@ -160,3 +166,35 @@ void base64_end_stream (void)
 	
 	buffered_bytes = 0;
 }
+
+#endif
+
+
+#ifdef BASE64_DECODING
+
+static void decode_4char (const uint8_t *input, uint8_t *output)
+{
+	// restore the encoded bytes
+	// input:  00abcdef 00ghijkl 00mnopqr 00stuvwx
+	// output: abcdefgh ijklmnop qrstuvwx
+	output[0] = (input[0] << 2) | (input[1] >> 4);
+	output[1] = (input[1] << 4) | (input[2] >> 2);
+	output[2] = (input[2] << 6) | input[3];
+}
+
+static void decode_3char (const uint8_t *input, uint8_t *output)
+{
+	// input:  00abcdef 00ghijkl 00mnop00 =
+	// output: abcdefgh ijklmnop
+	output[0] = (input[0] << 2) | (input[1] >> 4);
+	output[1] = (input[1] << 4) | (input[2] >> 2);
+}
+
+static void decode_2char (const uint8_t *input, uint8_t *output)
+{
+	// input:  00abcdef 00gh0000 = =
+	// output: abcdefgh
+	output[0] = (input[0] << 2) | (input[1] >> 4);
+}
+
+#endif

@@ -45,7 +45,7 @@ int main(void){
 	m_usb_init();
 	init_timer();
 
-	set(PCICR,PCIE0); //eneable PCINT
+	set(PCICR,PCIE0); //enable PCINT
 	set(PCMSK0,PCINT7);//corresponds to pin mask
 
 	//RESET
@@ -56,14 +56,17 @@ int main(void){
 
  	sei();//enable interrupts, start ticks
 
-	while (TRUE){
-
+	for (;;)
+	{
 		//Edit PWM duty cycle
 		pot_state = m_adc(F6); 
 
+		/*
 		m_usb_tx_string("pot_state: ");
 		m_usb_tx_int((int)(pot_state));
 		m_usb_tx_string("\r\n");
+		*/
+		
 		// if (pot_state<512) 
 		// {	dir=0;//go left 
 		// 	duty_cycle=(abs(512-pot_state)*2)/10.230;

@@ -58,6 +58,7 @@ main.elf: $(MAIN) $(CHILDREN) $(PARENTS)
 main.hex: main.elf
 	rm -f main.hex
 	avr-objcopy -j .text -j .data -O ihex main.elf main.hex
+	avr-size -C --mcu=$(DEVICE) main.elf
 
 # Targets for code debugging and analysis:
 disasm:	main.elf

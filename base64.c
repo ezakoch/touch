@@ -57,13 +57,13 @@ static void encode_singlet (const uint8_t *input, uint8_t *output)
 
 void base64_encode (const uint8_t *input, const uint16_t len)
 {
-	if (len > MAX_BASE64_INPUT_BYTES)
+	if (len > MAX_BASE64_BYTES)
 	{
-		strcpy_P (base64_output, base64_err_str);
+		strcpy_P (base64_encoded_output, base64_err_str);
 		return;
 	}
 	
-	char *base64_output_ptr = base64_output;
+	char *base64_output_ptr = base64_encoded_output;
 	
 	// 3 bytes of input fit into 4 bytes of output
 	const uint16_t len_loops = len / 3;
@@ -172,29 +172,112 @@ void base64_end_encode_stream (void)
 
 #ifdef BASE64_DECODING
 
-static void decode_4char (const uint8_t *input, uint8_t *output)
+static void decode_4char (const char *input, uint8_t *output)
 {
+	const uint8_t *in = (const uint8_t*)input;  // cast to unsigned to avoid signedness issues when bitshifting
+	
 	// restore the encoded bytes
 	// input:  00abcdef 00ghijkl 00mnopqr 00stuvwx
 	// output: abcdefgh ijklmnop qrstuvwx
-	output[0] = (input[0] << 2) | (input[1] >> 4);
-	output[1] = (input[1] << 4) | (input[2] >> 2);
-	output[2] = (input[2] << 6) | input[3];
+	output[0] = (in[0] << 2) | (in[1] >> 4);
+	output[1] = (in[1] << 4) | (in[2] >> 2);
+	output[2] = (in[2] << 6) | in[3];
 }
 
-static void decode_3char (const uint8_t *input, uint8_t *output)
+static void decode_3char (const char *input, uint8_t *output)
 {
+	const uint8_t *in = (const uint8_t*)input;  // cast to unsigned to avoid signedness issues when bitshifting
+	
 	// input:  00abcdef 00ghijkl 00mnop00 =
 	// output: abcdefgh ijklmnop
-	output[0] = (input[0] << 2) | (input[1] >> 4);
-	output[1] = (input[1] << 4) | (input[2] >> 2);
+	output[0] = (in[0] << 2) | (in[1] >> 4);
+	output[1] = (in[1] << 4) | (in[2] >> 2);
 }
 
-static void decode_2char (const uint8_t *input, uint8_t *output)
+static void decode_2char (const char *input, uint8_t *output)
 {
+	const uint8_t *in = (const uint8_t*)input;  // cast to unsigned to avoid signedness issues when bitshifting
+	
 	// input:  00abcdef 00gh0000 = =
 	// output: abcdefgh
-	output[0] = (input[0] << 2) | (input[1] >> 4);
+	output[0] = (in[0] << 2) | (in[1] >> 4);
+}
+
+uint8_t base64_decoded_output[MAX_BASE64_BYTES];
+
+void base64_decode (const char *base64str, uint16_t *len)
+{
+	char buffer[4];
+	uint8_t buffer_idx = 0;
+	
+	*len = 0;
+	
+	while (*base64str && *base64str != '=')
+	{
+		buffer[buffer_idx++] = *(base64str++);
+		
+		if (buffer_idx >= 4)
+		{
+			decode_4char (buffer, &base64_decoded_output[*len]);
+			buffer_idx = 0;
+			*len += 3;
+		}
+	}
+	
+	switch (buffer_idx)
+	{
+		case 1:  // there should never be only a single character left in the buffer
+			base64_decoded_output[*len] = '!';
+			(*len)++;
+			break;
+		case 2:
+			decode_2char(buffer, &base64_decoded_output[*len]);
+			(*len)++;
+			break;
+		case 3:
+			decode_3char(buffer, &base64_decoded_output[*len]);
+			(*len) += 2;
+			break;
+	}
+}
+
+static char decode_buffer[4];
+static uint8_t decode_buffer_idx = 0;
+
+void base64_begin_decode_stream (void)
+{
+	decode_buffer_idx = 0;
+}
+
+bool base64_decode_stream (uint8_t **output, const char input)
+{
+	if (input == '=')
+	{  // end of the stream
+		switch (decode_buffer_idx)
+		{
+			// there should never be only a single character left in the buffer
+			case 2:
+			decode_2char(decode_buffer, *output);
+			(*output) += 1;
+			break;
+			case 3:
+			decode_3char(decode_buffer, *output);
+			(*output) += 2;
+			break;
+		}
+		return false;
+	}
+	
+	decode_buffer[decode_buffer_idx] = input;
+	decode_buffer_idx++;
+		
+	if (decode_buffer_idx >= 4)
+	{
+		decode_4char (decode_buffer, *output);
+		decode_buffer_idx = 0;
+		(*output) += 3;
+	}
+	return true;
 }
 
 #endif

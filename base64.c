@@ -1,5 +1,8 @@
+// These two includes are here because streaming output was coded for the M2 (http://medesign.seas.upenn.edu/index.php/Guides/MaEvArM)
+// For other systems, replace strcpy_P and m_usb_tx_char with strcpy and printf, or whatever is appropriate.
 #include "m_general.h"
 #include "m_usb.h"
+
 #include "base64.h"
 
 const char base64_err_str[] PROGMEM = "!BASE64!";
@@ -24,8 +27,6 @@ inline char base64_char_from_byte (const uint8_t byte)
 
 
 #ifdef BASE64_ENCODING
-
-char base64_encoded_output[MAX_BASE64_LEN + 1];
 
 static void encode_triplet (const uint8_t *input, uint8_t *output)
 {
@@ -54,6 +55,10 @@ static void encode_singlet (const uint8_t *input, uint8_t *output)
 	output[0] = input[0] >> 2;
 	output[1] = (input[0] << 4) & 0b00111111;
 }
+
+#ifdef BASE64_STATIC
+
+char base64_encoded_output[MAX_BASE64_LEN + 1];
 
 void base64_encode (const uint8_t *input, const uint16_t len)
 {
@@ -108,8 +113,9 @@ void base64_encode (const uint8_t *input, const uint16_t len)
 	
 	base64_output_ptr[4] = '\0';
 }
+#endif
 
-
+#ifdef BASE64_STREAMING
 
 static uint8_t buffered_bytes = 0;
 static uint8_t bytes[3];
@@ -166,11 +172,17 @@ void base64_end_encode_stream (void)
 	
 	buffered_bytes = 0;
 }
+#endif
 
 #endif
 
 
 #ifdef BASE64_DECODING
+
+inline bool valid_char (const char c)
+{
+	return (c >= '/' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c == '+';
+}
 
 static void decode_4char (const char *input, uint8_t *output)
 {
@@ -203,6 +215,7 @@ static void decode_2char (const char *input, uint8_t *output)
 	output[0] = (in[0] << 2) | (in[1] >> 4);
 }
 
+#ifdef BASE64_STATIC
 uint8_t base64_decoded_output[MAX_BASE64_BYTES];
 
 void base64_decode (const char *base64str, uint16_t *len)
@@ -212,7 +225,7 @@ void base64_decode (const char *base64str, uint16_t *len)
 	
 	*len = 0;
 	
-	while (*base64str && *base64str != '=')
+	while (*base64str && valid_char(*base64str) && *len < MAX_BASE64_BYTES - 3)
 	{
 		buffer[buffer_idx++] = *(base64str++);
 		
@@ -240,7 +253,9 @@ void base64_decode (const char *base64str, uint16_t *len)
 			break;
 	}
 }
+#endif
 
+#ifdef BASE64_STREAMING
 static char decode_buffer[4];
 static uint8_t decode_buffer_idx = 0;
 
@@ -251,7 +266,7 @@ void base64_begin_decode_stream (void)
 
 bool base64_decode_stream (uint8_t **output, const char input)
 {
-	if (input == '=')
+	if (!valid_char (input))
 	{  // end of the stream
 		switch (decode_buffer_idx)
 		{
@@ -279,5 +294,6 @@ bool base64_decode_stream (uint8_t **output, const char input)
 	}
 	return true;
 }
+#endif
 
 #endif

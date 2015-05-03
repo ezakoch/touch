@@ -7,7 +7,7 @@
 uint8_t message[MAX_MESSAGE_LENGTH];
 uint8_t *message_ptr = message;
 
-incoming_pc_data in_data;
+pc_data latest_pc_data;
 
 // message format:
 //  : (colon) = start of message
@@ -115,9 +115,28 @@ enum
     return UNKNOWN;
 }
 
+static void m_usb_tx_u64 (uint64_t val)
+{
+	char string[21] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+	uint8_t string_pos = 20;
+	
+	do 
+	{
+		string[string_pos] = '0' + val % 10;
+		val /= 10;
+		string_pos--;
+	} while (val != 0);
+	
+	for (uint8_t i = 0; i < 21; i++)
+	{
+		if (string[i])
+			m_usb_tx_char (string[i]);
+	}
+}
+
 void process_pc_message (void)
 {
-    const uint8_t message_len = message_ptr - message;
+    const uint16_t message_len = message_ptr - message;
     
     if (message_len < 2)  // messages must be at least two characters long
     {
@@ -131,11 +150,40 @@ void process_pc_message (void)
     {
         case ECHO:
             m_usb_tx_char (':');
-            for (uint8_t i = 0; i < message_len; i++)
+            for (uint16_t i = 0; i < message_len; i++)
                 m_usb_tx_char (message[i]);
             m_usb_tx_string ("(ECHO);");
             break;
         case DATA:
+			{
+				// decode the base64 string in-place to re-use the message buffer
+				// (will work because the base64 string is always longer than what it encoded)
+				uint8_t *decoded_end_ptr = message;
+				
+				{
+					bool decode_working = true;
+				
+					base64_begin_decode_stream();
+					for (uint16_t i = 0; i < message_len && decode_working; i++)
+						decode_working = base64_decode_stream (&decoded_end_ptr, (char)message[i]);
+				}
+				
+				const uint16_t decoded_len = decoded_end_ptr - message;
+				if (decoded_len != sizeof(pc_data))
+				{
+					m_usb_tx_string (":DA!");  // send "invalid data" response
+					if (decoded_len >= sizeof(uint64_t))
+					{  // include the data's timestamp, if we got that much of it
+						const uint64_t *out_ptr = (uint64_t*)message;
+						m_usb_tx_u64 (*out_ptr);
+					}
+					m_usb_tx_char (';');
+				}
+				else
+				{
+					m_usb_tx_string (":DAOK;");  // debug: indicate successful message
+				}
+			}
             break;
         case UNKNOWN:
         default:

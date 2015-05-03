@@ -119,14 +119,19 @@ int main(void){
 
 //cli(); //disable interrupts
 
-void driveMotor(int dir, float y_desired){
+void driveMotor(int dir, float y_desired)
+{
+	static uint64_t prev_time = 0;
 	
-	const uint64_t dt = us_elapsed();
+	const uint64_t current_time = us_elapsed();
+	const uint64_t dt = current_time - prev_time;
 	const float Kp = 1.0;
 
-	m_usb_tx_string("y_desired: ");
-	m_usb_tx_int((int)(y_desired));
-	m_usb_tx_string("\r\n");
+	#ifdef DEBUG
+		m_usb_tx_string("y_desired: ");
+		m_usb_tx_int((int)(y_desired));
+		m_usb_tx_string("\r\n");
+	#endif
 
 	// y_desired=y_desired/MAXRPS * 100.0;//units
 
@@ -135,13 +140,15 @@ void driveMotor(int dir, float y_desired){
 	y_actual/=FUDGE; //FUDGE FACTOR
 	float error = (y_desired-y_actual);//WHAT TO COMPARE HERE
 
-	m_usb_tx_string("error: ");
-	m_usb_tx_int((int)(error));
-	m_usb_tx_string("\r\n");
+	#ifdef DEBUG
+		m_usb_tx_string("error: ");
+		m_usb_tx_int((int)(error));
+		m_usb_tx_string("\r\n");
 
-	m_usb_tx_string("y_actual: ");
-	m_usb_tx_int((int)(y_actual));
-	m_usb_tx_string("\r\n");
+		m_usb_tx_string("y_actual: ");
+		m_usb_tx_int((int)(y_actual));
+		m_usb_tx_string("\r\n");
+	#endif
 	//boost old duty cycle to compensate
 
 	y_desired=y_desired/MAXRPS * 100.0;//percentage
@@ -157,17 +164,17 @@ void driveMotor(int dir, float y_desired){
  		duty_cycle=0.0;
  	}
 
-
-	m_usb_tx_string("duty_cycle: ");
-	m_usb_tx_int((int)(duty_cycle));
-	m_usb_tx_string("\r\n");
-
- 	count=0; //reset
+	#ifdef DEBUG
+		m_usb_tx_string("duty_cycle: ");
+		m_usb_tx_int((int)(duty_cycle));
+		m_usb_tx_string("\r\n");
+	#endif
 
  	//PWM instructions
  	m_pwm_duty(TIMER, CHANNEL, duty_cycle);
 
- 	clear_timer(); //reset
+	count=0;  // reset encoder count
+ 	prev_time = current_time;  // update the elapsed time, to get dt when this function is run next
  }
 
 //INTERRUPTS

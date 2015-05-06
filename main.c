@@ -1,10 +1,6 @@
 //Sending values using Wireless
-
-<<<<<<< HEAD
 // cd Dropbox/TOUCH/m2/touch
 
-=======
->>>>>>> 5499b06aa4c0adef629ba2dc8e8a053bd96c1026
 //INCLUDES
 #include "saast.h" //SAAST Library calls
 #include "m_general.h"
@@ -41,10 +37,8 @@ int main(void){
 	int dir=0;
 	float pot_state;
 	float y_desired;
-<<<<<<< HEAD
 	float temp;
-=======
->>>>>>> 5499b06aa4c0adef629ba2dc8e8a053bd96c1026
+
 	// float duty_cycle = 0.0;
 	// float scaling = 1.0;
 	// float accel;
@@ -70,17 +64,9 @@ int main(void){
 		//Edit PWM duty cycle
 		pot_state = m_adc(F6); 
 
-<<<<<<< HEAD
-		// m_usb_tx_string("pot_state: ");
-		// m_usb_tx_int((int)(pot_state));
-		// m_usb_tx_string("\r\n");
-
-
-=======
 		m_usb_tx_string("pot_state: ");
 		m_usb_tx_int((int)(pot_state));
 		m_usb_tx_string("\r\n");
->>>>>>> 5499b06aa4c0adef629ba2dc8e8a053bd96c1026
 		// if (pot_state<512) 
 		// {	dir=0;//go left 
 		// 	duty_cycle=(abs(512-pot_state)*2)/10.230;
@@ -127,7 +113,7 @@ int main(void){
 				break;
 				//move finger up to a position (integration of velocity control)
 		}
-<<<<<<< HEAD
+
 
 		// THERMAL ELEMENT USB DEBUG
 		temp = m_adc(F4);
@@ -135,8 +121,6 @@ int main(void){
 		m_usb_tx_int((int)(temp));
 		m_usb_tx_string("\r\n");
 
-=======
->>>>>>> 5499b06aa4c0adef629ba2dc8e8a053bd96c1026
 		m_wait(1);//ms
 	}
 }
@@ -148,15 +132,10 @@ void driveMotor(int dir, float y_desired){
 	const uint64_t dt = us_elapsed();
 	const float Kp = 1.0;
 
-<<<<<<< HEAD
-	// m_usb_tx_string("y_desired: ");
-	// m_usb_tx_int((int)(y_desired));
-	// m_usb_tx_string("\r\n");
-=======
+
 	m_usb_tx_string("y_desired: ");
 	m_usb_tx_int((int)(y_desired));
 	m_usb_tx_string("\r\n");
->>>>>>> 5499b06aa4c0adef629ba2dc8e8a053bd96c1026
 
 	// y_desired=y_desired/MAXRPS * 100.0;//units
 
@@ -165,15 +144,7 @@ void driveMotor(int dir, float y_desired){
 	y_actual/=FUDGE; //FUDGE FACTOR
 	float error = (y_desired-y_actual);//WHAT TO COMPARE HERE
 
-<<<<<<< HEAD
-	// m_usb_tx_string("error: ");
-	// m_usb_tx_int((int)(error));
-	// m_usb_tx_string("\r\n");
 
-	// m_usb_tx_string("y_actual: ");
-	// m_usb_tx_int((int)(y_actual));
-	// m_usb_tx_string("\r\n");
-=======
 	m_usb_tx_string("error: ");
 	m_usb_tx_int((int)(error));
 	m_usb_tx_string("\r\n");
@@ -181,7 +152,6 @@ void driveMotor(int dir, float y_desired){
 	m_usb_tx_string("y_actual: ");
 	m_usb_tx_int((int)(y_actual));
 	m_usb_tx_string("\r\n");
->>>>>>> 5499b06aa4c0adef629ba2dc8e8a053bd96c1026
 	//boost old duty cycle to compensate
 
 	y_desired=y_desired/MAXRPS * 100.0;//percentage
@@ -197,16 +167,9 @@ void driveMotor(int dir, float y_desired){
  		duty_cycle=0.0;
  	}
 
-
-<<<<<<< HEAD
-	// m_usb_tx_string("duty_cycle: ");
-	// m_usb_tx_int((int)(duty_cycle));
-	// m_usb_tx_string("\r\n");
-=======
 	m_usb_tx_string("duty_cycle: ");
 	m_usb_tx_int((int)(duty_cycle));
 	m_usb_tx_string("\r\n");
->>>>>>> 5499b06aa4c0adef629ba2dc8e8a053bd96c1026
 
  	count=0; //reset
 

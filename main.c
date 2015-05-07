@@ -1,5 +1,5 @@
 //Sending values using Wireless
-// cd Dropbox/TOUCH/m2/touch
+// cd Dropbox/TOUCH/m2
 
 //INCLUDES
 #include "saast.h" //SAAST Library calls
@@ -38,6 +38,10 @@ int main(void){
 	float pot_state;
 	float y_desired;
 	float temp;
+	float temp_diff;
+	float temp_desired = 300.0; //need a separate sensor to check the surface
+	float TECout;
+	float Kp_temp = 0.5;
 
 	// float duty_cycle = 0.0;
 	// float scaling = 1.0;
@@ -120,6 +124,9 @@ int main(void){
 		m_usb_tx_string("TEMP: ");
 		m_usb_tx_int((int)(temp));
 		m_usb_tx_string("\r\n");
+		temp_diff = temp_desired - temp;
+		TECout = temp_desired + (temp_diff*Kp_temp); //PID
+		m_pwm_duty(3, 1, TECout); //pin C6
 
 		m_wait(1);//ms
 	}
@@ -172,9 +179,6 @@ void driveMotor(int dir, float y_desired){
 	m_usb_tx_string("\r\n");
 
  	count=0; //reset
-
- 	//PWM instructions
- 	m_pwm_duty(TIMER, CHANNEL, duty_cycle);
 
  	clear_timer(); //reset
  }

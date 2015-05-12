@@ -14,7 +14,7 @@
 #include <avr/interrupt.h>
 
 //DEFINE CONSTANTS
-#define TIMER 1 //Timers 0,1,3,4 available
+#define TIMER 1 //Timers 0,1,3,4 availabl1
 #define FREQ 40000.0 //floating point in Hz, aim for 20kHz
 #define CHANNEL 1 //Pin D0 for motor PWM
 #define MAXRPM 5000.0 //Maxon 144325 assembly with gearhead
@@ -39,9 +39,9 @@ int main(void){
 	float y_desired;
 	float temp;
 	float temp_diff;
-	float temp_desired = 300.0; //need a separate sensor to check the surface
+	float temp_desired = 600.0; //need a separate sensor to check the surface
 	float TECout;
-	float Kp_temp = 0.5;
+	float Kp_temp = 2.0;
 
 	// float duty_cycle = 0.0;
 	// float scaling = 1.0;
@@ -60,6 +60,8 @@ int main(void){
 	m_green(OFF);
 	m_pwm_timer(TIMER, FREQ);
  	m_pwm_output(TIMER, CHANNEL, ON);
+ 	//Reset TEC timer
+ 	m_pwm_timer(3, 10000.0);
 
  	sei();//enable interrupts, start ticks
 
@@ -68,9 +70,9 @@ int main(void){
 		//Edit PWM duty cycle
 		pot_state = m_adc(F6); 
 
-		m_usb_tx_string("pot_state: ");
-		m_usb_tx_int((int)(pot_state));
-		m_usb_tx_string("\r\n");
+		// m_usb_tx_string("pot_state: ");
+		// m_usb_tx_int((int)(pot_state));
+		// m_usb_tx_string("\r\n");
 		// if (pot_state<512) 
 		// {	dir=0;//go left 
 		// 	duty_cycle=(abs(512-pot_state)*2)/10.230;
@@ -121,11 +123,23 @@ int main(void){
 
 		// THERMAL ELEMENT USB DEBUG
 		temp = m_adc(F4);
+
 		m_usb_tx_string("TEMP: ");
 		m_usb_tx_int((int)(temp));
 		m_usb_tx_string("\r\n");
+
 		temp_diff = temp_desired - temp;
-		TECout = temp_desired + (temp_diff*Kp_temp); //PID
+
+		m_usb_tx_string("diff: ");
+		m_usb_tx_int((int)(temp_diff));
+		m_usb_tx_string("\r\n");
+
+		TECout = (float)(temp_diff*Kp_temp)/1023.0; //PID duty cycle for TEC
+
+		m_usb_tx_string("duty temp: ");
+		m_usb_tx_int((int)(TECout*100.0));
+		m_usb_tx_string("\r\n");
+
 		m_pwm_duty(3, 1, TECout); //pin C6
 
 		m_wait(1);//ms
@@ -140,9 +154,9 @@ void driveMotor(int dir, float y_desired){
 	const float Kp = 1.0;
 
 
-	m_usb_tx_string("y_desired: ");
-	m_usb_tx_int((int)(y_desired));
-	m_usb_tx_string("\r\n");
+	// m_usb_tx_string("y_desired: ");
+	// m_usb_tx_int((int)(y_desired));
+	// m_usb_tx_string("\r\n");
 
 	// y_desired=y_desired/MAXRPS * 100.0;//units
 
@@ -152,13 +166,13 @@ void driveMotor(int dir, float y_desired){
 	float error = (y_desired-y_actual);//WHAT TO COMPARE HERE
 
 
-	m_usb_tx_string("error: ");
-	m_usb_tx_int((int)(error));
-	m_usb_tx_string("\r\n");
+	// m_usb_tx_string("error: ");
+	// m_usb_tx_int((int)(error));
+	// m_usb_tx_string("\r\n");
 
-	m_usb_tx_string("y_actual: ");
-	m_usb_tx_int((int)(y_actual));
-	m_usb_tx_string("\r\n");
+	// m_usb_tx_string("y_actual: ");
+	// m_usb_tx_int((int)(y_actual));
+	// m_usb_tx_string("\r\n");
 	//boost old duty cycle to compensate
 
 	y_desired=y_desired/MAXRPS * 100.0;//percentage
@@ -174,9 +188,11 @@ void driveMotor(int dir, float y_desired){
  		duty_cycle=0.0;
  	}
 
-	m_usb_tx_string("duty_cycle: ");
-	m_usb_tx_int((int)(duty_cycle));
-	m_usb_tx_string("\r\n");
+ 	m_pwm_duty(TIMER, CHANNEL, duty_cycle);
+
+	// m_usb_tx_string("duty_cycle: ");
+	// m_usb_tx_int((int)(duty_cycle));
+	// m_usb_tx_string("\r\n");
 
  	count=0; //reset
 

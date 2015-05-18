@@ -24,8 +24,8 @@
 #define FUDGE 4
 
 //SWITCH DEBUGGING
-#define DEBUG
-#define DEBUG_TEMP
+// #define DEBUG
+// #define DEBUG_TEMP
 
 //GLOBAL VARS
 volatile int count=0; //encoder ticks
@@ -46,9 +46,7 @@ int main(void){
 	float temp_diff;
 	float temp_desired = 600.0; //need a separate sensor to check the surface
 	float TECout;
-	float error;
 	float Kp_temp = 2.0;
-	float duty_cycle = 0.0;
 	// float scaling = 1.0;
 	// float accel;
 
@@ -71,72 +69,22 @@ int main(void){
  	set(PCICR,PCIE0); //pin-change, cleared by default
  	set(PCMSK0,PCINT0); //remove mask for corresponding interrupt
 
-	while (TRUE){
+	// THERMAL ELEMENT USB DEBUG
+	temp = m_adc(F4);
+	temp_diff = temp_desired - temp;
+	TECout = (float)(temp_diff*Kp_temp)/1023.0; //PID duty cycle for TEC
 
-		//Edit PWM duty cycle
-		pot_state = m_adc(F6)/1023.0; //percentage 
-
-		m_usb_tx_string("pot_state: ");
-		m_usb_tx_int((int)(pot_state*100.0));
+	#ifdef DEBUG_TEMP
+		m_usb_tx_string("TEMP: ");
+		m_usb_tx_int((int)(temp));
+		m_usb_tx_string("diff: ");
+		m_usb_tx_int((int)(temp_diff));
+		m_usb_tx_string("duty temp: ");
+		m_usb_tx_int((int)(TECout*100.0));
 		m_usb_tx_string("\r\n");
+	#endif
 
-		y_desired=(float) MAXRPS * pot_state; //rps
-		//y_desired = MAXRPM * (pot_state/1023.0) * TICKS * (60.0); //ticks per second 
-
-		//USB Communications
-		//Find the serial object: ls /dev/tty.*
-		//Start the session: screen /dev/tty.usbmodem411
-		/*To end the session: press Ctrl-A then Ctrl-\ */
-
-		//ACCELERATIONS	
-		// accel = m_adc(F1);
-		// duty_cycle = duty_cycle + (accel/scaling);
-
-		// m_usb_tx_string("ACCELERATIONS: ");
-		// m_usb_tx_int((int)(accel));
-		// m_usb_tx_string("\r\n");
-
-		//BUTTON PRESS
-		if (m_gpio_in(D4)==ON){state=1;}
-		else{state=0;}
-
-		//ACTUATE STEPPER FOR FINGER - Motor ON/OFF
-		switch(state){
-			case 0:
-				m_red(ON);
-				m_green(OFF);
-				dir=1;
-				driveMotor(dir, 0.0); //stop
-				break;
-				//move finger down to a position (integration of velocity control)
-			case 1:
-				m_red(OFF);
-				m_green(ON);
-				dir=0;
-				driveMotor(dir, y_desired);//command new DC
-				break;
-				//move finger up to a position (integration of velocity control)
-		}
-
-
-		// THERMAL ELEMENT USB DEBUG
-		temp = m_adc(F4);
-		temp_diff = temp_desired - temp;
-		TECout = (float)(temp_diff*Kp_temp)/1023.0; //PID duty cycle for TEC
-
-		#ifdef DEBUG_TEMP
-			m_usb_tx_string("TEMP: ");
-			m_usb_tx_int((int)(temp));
-			m_usb_tx_string("diff: ");
-			m_usb_tx_int((int)(temp_diff));
-			m_usb_tx_string("duty temp: ");
-			m_usb_tx_int((int)(TECout*100.0));
-			m_usb_tx_string("\r\n");
-		#endif
-
-		m_pwm_duty(3, 1, TECout); //pin C6
-
-		m_wait(1);//ms
+	m_pwm_duty(3, 1, TECout); //pin C6
 
 	for (;;)
 	{
@@ -199,6 +147,9 @@ void driveMotor(int dir, float y_desired){
 	float y_actual=(float) (count/TICKS)/((float)dt/1000000.0);//rps
 	y_actual/=FUDGE; //FUDGE FACTOR
 	y_desired=y_desired/MAXRPS * 100.0;//percentage
+
+	float error=y_desired-y_actual;
+
 	error=error/MAXRPS*100;
 
 	#ifdef DEBUG
@@ -211,8 +162,6 @@ void driveMotor(int dir, float y_desired){
 		m_usb_tx_string("\r\n");
 	#endif
 
- 	//update PWM duty cycle per the controller
- 	m_pwm_duty(TIMER, CHANNEL, duty_cycle); //Timer 1, Channel 1: pin B6 
 
  	float duty_cycle = y_desired + (error * Kp); //expected output + gain
  	if (duty_cycle > 100.0)
@@ -220,13 +169,15 @@ void driveMotor(int dir, float y_desired){
  	if (duty_cycle < 0.0)
  		duty_cycle = 0.0;
 
+ 	//update PWM duty cycle per the controller
+ 	m_pwm_duty(TIMER, CHANNEL, duty_cycle); //Timer 1, Channel 1: pin B6 
+
+
 	#ifdef DEBUG
 		m_usb_tx_string("duty_cycle: ");
 		m_usb_tx_int((int)(duty_cycle));
 		m_usb_tx_string("\r\n");
 	#endif
-
- 	clear_timer(); //reset
 
  	//PWM instructions
  	m_pwm_duty(TIMER, CHANNEL, duty_cycle);

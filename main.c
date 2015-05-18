@@ -7,6 +7,7 @@
 #include "m_usb.h"
 #include "m_bus.h"
 #include "timer_ticks.h"
+#include "pc_communication.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -51,6 +52,12 @@ int main(void){
 	m_usb_init();
 	init_timer();
 
+<<<<<<< HEAD
+=======
+	set(PCICR,PCIE0); //enable PCINT
+	set(PCMSK0,PCINT7);//corresponds to pin mask
+
+>>>>>>> pc_communication
 	//RESET
 	m_red(OFF);
 	m_green(OFF);
@@ -62,6 +69,7 @@ int main(void){
 
  	sei();//enable interrupts, start ticks
 
+<<<<<<< HEAD
  	//ENABLE PIN CHANGE INTERRUPTS: PCINT0 - D0
  	set(PCICR,PCIE0); //pin-change, cleared by default
  	set(PCMSK0,PCINT0); //remove mask for corresponding interrupt
@@ -136,20 +144,70 @@ int main(void){
 		m_pwm_duty(3, 1, TECout); //pin C6
 
 		m_wait(1);//ms
+=======
+	for (;;)
+	{
+		static uint64_t control_loop_last_run_time = 0;
+		
+		// run the control loop roughly once every millisecond
+		if (us_elapsed() - control_loop_last_run_time > 1000ul)
+		{
+			//Edit PWM duty cycle
+			pot_state = m_adc(F6); 
+
+			y_desired=(float)MAXRPS*(pot_state/1023.0); //rps
+
+			//BUTTON PRESS
+			if (m_gpio_in(D4)==ON){state=1;}
+			else{state=0;}
+
+			//ACTUATE STEPPER FOR FINGER - Motor ON/OFF
+			switch(state){
+				case 0:
+					m_red(ON);
+					m_green(OFF);
+					dir=1;
+					driveMotor(dir, 0.0); //stop
+					break;
+					//move finger down to a position (integration of velocity control)
+				case 1:
+					m_red(OFF);
+					m_green(ON);
+					dir=0;
+					driveMotor(dir, y_desired);//command new DC
+					break;
+					//move finger up to a position (integration of velocity control)
+			}
+			
+			control_loop_last_run_time = us_elapsed();
+		}
+		
+		if (received_pc_message())
+			process_pc_message();
+>>>>>>> pc_communication
 	}
 }
 
-//cli(); //disable interrupts
-
-void driveMotor(int dir, float y_desired){
+void driveMotor(int dir, float y_desired)
+{
+	static uint64_t prev_time = 0;
 	
-	const uint64_t dt = us_elapsed();
+	const uint64_t current_time = us_elapsed();
+	const uint64_t dt = current_time - prev_time;
 	const float Kp = 1.0;
 
+<<<<<<< HEAD
 
 	m_usb_tx_string("y_desired: ");
 	m_usb_tx_int((int)(y_desired));
 	m_usb_tx_string("\r\n");
+=======
+	#ifdef DEBUG
+		m_usb_tx_string("y_desired: ");
+		m_usb_tx_int((int)(y_desired));
+		m_usb_tx_string("\r\n");
+	#endif
+>>>>>>> pc_communication
 
 	// y_desired=y_desired/MAXRPS * 100.0;//units
 
@@ -160,17 +218,30 @@ void driveMotor(int dir, float y_desired){
 	m_usb_tx_int((int)(y_actual));
 	m_usb_tx_string("\r\n");
 
+<<<<<<< HEAD
 	float error = (y_desired-y_actual);//WHAT TO COMPARE HERE
 	m_usb_tx_string("error: ");
 	m_usb_tx_int((int)(error));
 	m_usb_tx_string("\r\n");
 
 
+=======
+	#ifdef DEBUG
+		m_usb_tx_string("error: ");
+		m_usb_tx_int((int)(error));
+		m_usb_tx_string("\r\n");
+
+		m_usb_tx_string("y_actual: ");
+		m_usb_tx_int((int)(y_actual));
+		m_usb_tx_string("\r\n");
+	#endif
+>>>>>>> pc_communication
 	//boost old duty cycle to compensate
 
 	y_desired=y_desired/MAXRPS * 100.0;//percentage
 	error=error/MAXRPS*100;\
 
+<<<<<<< HEAD
  	float duty_cycle=y_desired+(error*Kp); //expected output + gain
  	if (duty_cycle>100.0)
  	{
@@ -183,14 +254,29 @@ void driveMotor(int dir, float y_desired){
 
  	//update PWM duty cycle per the controller
  	m_pwm_duty(TIMER, CHANNEL, duty_cycle); //Timer 1, Channel 1: pin B6 
+=======
+ 	float duty_cycle = y_desired + (error * Kp); //expected output + gain
+ 	if (duty_cycle > 100.0)
+ 		duty_cycle = 100.0;
+ 	if (duty_cycle < 0.0)
+ 		duty_cycle = 0.0;
+>>>>>>> pc_communication
 
-	m_usb_tx_string("duty_cycle: ");
-	m_usb_tx_int((int)(duty_cycle));
-	m_usb_tx_string("\r\n");
+	#ifdef DEBUG
+		m_usb_tx_string("duty_cycle: ");
+		m_usb_tx_int((int)(duty_cycle));
+		m_usb_tx_string("\r\n");
+	#endif
 
- 	count=0; //reset
-
+<<<<<<< HEAD
  	clear_timer(); //reset
+=======
+ 	//PWM instructions
+ 	m_pwm_duty(TIMER, CHANNEL, duty_cycle);
+
+	count = 0;  // reset encoder count
+ 	prev_time = current_time;  // update the elapsed time, to get dt when this function is run next
+>>>>>>> pc_communication
  }
 
 //INTERRUPTS

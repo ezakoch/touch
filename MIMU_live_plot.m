@@ -18,7 +18,6 @@
 % fclose(instrfindall);
 % end
 %
-%
 
 %% If the above initialization does not work, please run the following commands manually and disconnect and reconnect USB.
 % fclose(serial('COM5','Baudrate', 9600));

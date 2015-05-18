@@ -6,10 +6,12 @@
 % Hit Ctrl-C to quit the program
 %
 % By Nick McGill
-% Edited by Eza Koch for ADC controller debugging
+% Edited by Eza Koch for ADC control debugging
 % Reads m_imu values from the M2 microcontroller and plots the desired data
 % in real time.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
 
 %% Initialize program and USB port
 % Close any existing open port connections
@@ -34,10 +36,10 @@
 %% VARIABLES
 maxPoints = 20;         % Max number of data points displayed at a time.
 t = 1:1:maxPoints;      % Create an evenly spaced matrix for X-axis.
-Controller_Log = zeros(2,2);   % Controller data points logged here in format: [time ADC_Value]
-Controller_live_plot_log = zeros(maxPoints,1); % Create an array to store ADC values.
+IMU_Log = zeros(2,2);   % IMU data points logged here in format: [time ADC_Value]
+IMU_live_plot_log = zeros(maxPoints,1); % Create an array to store ADC values.
 Controller_target = zeros(1,maxPoints);
-Controller_actual = zeros(1,maxPoints);
+Contactual = zeros(1,maxPoints);
 
 IMU_RANGE = -2000:2000;   % signed integer 16-bit
 LOGFREQUENCY = 1;  % Log the ADC value every certain number of times.  Lower = more data points.
@@ -76,29 +78,61 @@ while 1
     %m2_ADC = hex2dec(m2_buffer(1:4));
     % Expecting data in the form: [int ANGLE]
 %    keyboard
-
+%For use specifically with Acrobatv1.0 code
+% [RealinputACC, remainder] = strtok(m2_buffer);
+% RealinputACC = str2num(RealinputACC);
+% [RealinputGyr, Angle_Actual] =strtok(remainder);
+% RealinputGyr = str2num(RealinputGyr);
+% Angle_Actual = str2num(Angle_Actual);
 %For general use
+%     [m2_ax, remain] = str2num(strtok(m2_buffer));
+%     [m2_ay, remain2] = strtok(remain);
+%     [m2_az, remain3] = strtok(remain2);
+%     [m2_gx, remain4] = strtok(remain3);
+%     [m2_gy, remain5] = strtok(remain4);
+%     [m2_gz, remain6] = strtok(remain5);
+%     [m2_mx, remain7] = strtok(remain6);
+%     [m2_my, remain8] = strtok(remain7);
+%     [m2_mz] = strtok(remain8);
     [target, remainder] = str2num(strtok(m2_buffer));
     [actual] = strtok(remainder);
     m2_buffer;
     time = toc; % Stamp the time the value was received
     
     % Remove the oldest entry.    
-    Controller_target = circshift(Controller_target,-1);
-    Controller_actual = circshift(Controller_actual,-1);
-        
+    IMU_ax = circshift(IMU_ax,-1);
+    IMU_ay = circshift(IMU_ay,-1);
+    IMU_az = circshift(IMU_az,-1);
+    IMU_gx = circshift(IMU_gx,-1);
+    IMU_gy = circshift(IMU_gy,-1);
+    IMU_gz = circshift(IMU_gz,-1);
+    IMU_mx = circshift(IMU_mx,-1);
+    IMU_my = circshift(IMU_my,-1);
+    IMU_mz = circshift(IMU_mz,-1);
+    
+    % Store most recent data at the end of the array
+    
     %% Plotting
     figure(1);
     clf;
     hold on
     
-    h(1)=plot(t, Controller_target(:,1),':or','LineWidth',2);
-    h(2)=plot(t, Controller_actual(:,1),':og','LineWidth',2);
-   
-    legend(h,'target','actual');
-    title('Controller');
-    xlabel('Sample');
-    ylabel('rps %');
+    h(1)=plot(t, IMU_ax(:,1),':or','LineWidth',2);
+    h(2)=plot(t, IMU_ay(:,1),':og','LineWidth',2);
+    h(3)=plot(t, IMU_az(:,1),':om','LineWidth',2);
+    h(4)=plot(t, IMU_gx(:,1),':*t','LineWidth',2);
+    h(5)=plot(t, IMU_gy(:,1),'-*g','LineWidth',2);
+    h(6)=plot(t, IMU_gz(:,1),'-*m','LineWidth',2);
+    h(7)=plot(t, IMU_mx(:,1),'--r','LineWidth',2);
+    h(8)=plot(t, IMU_my(:,1),'--g','LineWidth',2);
+    h(9)=plot(t, IMU_mz(:,1),'--m','LineWidth',2);
+
+    legend(h,'ax','ay','az', ...
+             'gx','gy','gz', ...
+             'mx','my','mz');
+    title('IMU values');
+    xlabel('Time');
+    ylabel('Angle of Robot');
     axis([0 maxPoints -1024 1024]);
     grid on
     pause(.04);

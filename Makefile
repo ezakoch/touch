@@ -12,7 +12,7 @@
 # to include code supplied by maevarm, add a .o target
 # tag to the parents line (e.g. "PARENTS = "m_bus.o")
 # --------------------------------------------------------
-MAIN       = main.o timer_ticks.o
+MAIN       = main.o timer_ticks.o pc_communication.o base64.o
 CHILDREN   = 
 PARENTS    = m_usb.o 
 
@@ -28,7 +28,7 @@ LIBRARIES = libsaast.a
 DEVICE     = atmega32u4
 CLOCK      = 16000000
 
-COMPILE = avr-gcc -Wall -Os -DF_CPU=$(CLOCK) -mmcu=$(DEVICE)
+COMPILE = avr-gcc -Wall -Os -DF_CPU=$(CLOCK) -mmcu=$(DEVICE) -std=c99
 
 # symbolic targets: 
 all:	main.hex
@@ -58,6 +58,7 @@ main.elf: $(MAIN) $(CHILDREN) $(PARENTS)
 main.hex: main.elf
 	rm -f main.hex
 	avr-objcopy -j .text -j .data -O ihex main.elf main.hex
+	avr-size -C --mcu=$(DEVICE) main.elf
 
 # Targets for code debugging and analysis:
 disasm:	main.elf

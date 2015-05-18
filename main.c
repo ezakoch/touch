@@ -1,5 +1,6 @@
 //Sending values using Wireless
 // cd Dropbox/TOUCH/m2
+// Eza Koch
 
 //INCLUDES
 #include "saast.h" //SAAST Library calls
@@ -18,10 +19,10 @@
 #define TIMER 1 //Timers 0,1,3,4 availabl1
 #define FREQ 40000.0 //floating point in Hz, aim for 20kHz
 #define CHANNEL 1 //Pin D0 for motor PWM
-// #define MAXRPM 5000.0 
 #define MAXRPS 83.3 //Maxon 144325 assembly with gearhead 5000.0/60.0
 #define TICKS 16.0 //per revolution
 #define FUDGE 4
+
 //SWITCH DEBUGGING
 #define DEBUG
 #define DEBUG_TEMP
@@ -45,9 +46,9 @@ int main(void){
 	float temp_diff;
 	float temp_desired = 600.0; //need a separate sensor to check the surface
 	float TECout;
+	float error;
 	float Kp_temp = 2.0;
-
-	// float duty_cycle = 0.0;
+	float duty_cycle = 0.0;
 	// float scaling = 1.0;
 	// float accel;
 
@@ -153,7 +154,7 @@ int main(void){
 			if (m_gpio_in(D4)==ON){state=1;}
 			else{state=0;}
 
-			//ACTUATE STEPPER FOR FINGER - Motor ON/OFF
+			//Motor ON/OFF
 			switch(state){
 				case 0:
 					m_red(ON);
@@ -161,14 +162,12 @@ int main(void){
 					dir=1;
 					driveMotor(dir, 0.0); //stop
 					break;
-					//move finger down to a position (integration of velocity control)
 				case 1:
 					m_red(OFF);
 					m_green(ON);
 					dir=0;
 					driveMotor(dir, y_desired);//command new DC
 					break;
-					//move finger up to a position (integration of velocity control)
 			}
 			
 			control_loop_last_run_time = us_elapsed();
@@ -179,8 +178,8 @@ int main(void){
 	}
 }
 
-void driveMotor(int dir, float y_desired)
-{
+//MOTOR CONTROL HELPER
+void driveMotor(int dir, float y_desired){
 	static uint64_t prev_time = 0;
 	
 	const uint64_t current_time = us_elapsed();
@@ -199,6 +198,8 @@ void driveMotor(int dir, float y_desired)
 	//CONTROL LOOP
 	float y_actual=(float) (count/TICKS)/((float)dt/1000000.0);//rps
 	y_actual/=FUDGE; //FUDGE FACTOR
+	y_desired=y_desired/MAXRPS * 100.0;//percentage
+	error=error/MAXRPS*100;
 
 	#ifdef DEBUG
 		m_usb_tx_string("error: ");
@@ -209,9 +210,6 @@ void driveMotor(int dir, float y_desired)
 		m_usb_tx_int((int)(y_actual));
 		m_usb_tx_string("\r\n");
 	#endif
-
-	y_desired=y_desired/MAXRPS * 100.0;//percentage
-	error=error/MAXRPS*100;
 
  	//update PWM duty cycle per the controller
  	m_pwm_duty(TIMER, CHANNEL, duty_cycle); //Timer 1, Channel 1: pin B6 
@@ -235,7 +233,7 @@ void driveMotor(int dir, float y_desired)
 
 	count = 0;  // reset encoder count
  	prev_time = current_time;  // update the elapsed time, to get dt when this function is run next
- }
+}
 
 //INTERRUPTS
 ISR(PCINT0_vect){count++;} //Timer 0, pin B0

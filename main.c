@@ -20,8 +20,6 @@
 #define FREQ 40000.0 //floating point in Hz, aim for 20kHz
 #define CHANNEL 1 //Pin D0 for motor PWM
 #define MAXRPS 83.3 //Maxon 144325 assembly with gearhead 5000.0/60.0
-#define TICKS 500 //counts per turn
-#define FUDGE 4
 
 //SWITCH DEBUGGING
 #define DEBUG
@@ -31,7 +29,7 @@
 volatile int count=0; //encoder ticks
 
 //INITALIZE
-void driveMotor(int dir, float y_desired);
+void driveMotor(int dir, float rps_desired);
 
 //MAIN FUNCTION
 int main(void){
@@ -127,60 +125,61 @@ int main(void){
 }
 
 //MOTOR CONTROL HELPER
-void driveMotor(int dir, float y_desired){
+void driveMotor (int dir, float rps_desired){
 	static uint64_t prev_time = 0;
+	static float prev_error = 0;
+	static float error_sum = 0;
 	
 	const uint64_t current_time = us_elapsed();
-	const uint64_t dt = current_time - prev_time;
-	const float Kp = 10.0;
+	
+	const float dt = (float)(current_time - prev_time);
+	
+	const float Kp = 1.0;
+	const float Kd = 0.0;  // start with just PI control for now
+	const float Ki = 0.1;
 
+	// PID CONTROL LOOP
+	const float revs = (float)count / (float)TICKS;
+	const float rps_actual = revs * 1e6 / dt;
+	const float error = rps_desired - rps_actual;
 
 	#ifdef DEBUG
-		m_usb_tx_string("y_desired: ");
-		m_usb_tx_int((int)(y_desired));
+		m_usb_tx_string("rps_desired: ");
+		m_usb_tx_int((int)(rps_desired));
 		m_usb_tx_string("\r\n");
-	#endif
-
-	//CONTROL LOOP
-	float y_actual=(float) (count/TICKS)/((float)dt/1000000.0);//rps
-	y_actual/=FUDGE; //FUDGE FACTOR
-
-	float error=y_desired-y_actual; //[rps]
-	error=error/MAXRPS*100;// [%] 
-
-	y_desired=y_desired/MAXRPS * 100.0;//back to percent for duty cycle command
-
-	#ifdef DEBUG
+		
+		m_usb_tx_string("rps_actual: ");
+		m_usb_tx_int((int)(rps_actual));
+		m_usb_tx_string("\r\n");
+		
 		m_usb_tx_string("error: ");
 		m_usb_tx_int((int)(error));
 		m_usb_tx_string("\r\n");
-
-		m_usb_tx_string("y_actual: ");
-		m_usb_tx_int((int)(y_actual));
-		m_usb_tx_string("\r\n");
 	#endif
-
-
- 	float duty_cycle = y_desired + (error * Kp); //expected output + gain
+	
+	error_sum += (error * dt);
+	const float error_diff = (error - prev_error) / dt;
+	
+ 	float duty_cycle = (error * Kp) + (error_diff * Kd) + (error_sum * Ki);
  	if (duty_cycle > 100.0)
- 		duty_cycle = 100.0;
- 	if (duty_cycle < 0.0)
- 		duty_cycle = 0.0;
-
+		duty_cycle = 100.0;
+	if (duty_cycle < 0.0)
+		duty_cycle = 0.0;
+	
  	//update PWM duty cycle per the controller
  	m_pwm_duty(TIMER, CHANNEL, duty_cycle); //Timer 1, Channel 1: pin B6 
-
-
+	
 	#ifdef DEBUG
 		m_usb_tx_string("duty_cycle: ");
 		m_usb_tx_int((int)(duty_cycle));
-		m_usb_tx_string("\r\n");
+		m_usb_tx_string("\r\n===================\r\n");
 	#endif
-
+	
  	//PWM instructions
  	m_pwm_duty(TIMER, CHANNEL, duty_cycle);
-
+	
 	count = 0;  // reset encoder count
+	prev_error = error;  // update the previous error record
  	prev_time = current_time;  // update the elapsed time, to get dt when this function is run next
 }
 

@@ -22,6 +22,9 @@
 #define MAXRPS 83.3 //Maxon 144325 assembly with gearhead 5000.0/60.0
 #define TICKS 16.0 //per revolution
 #define FUDGE 4
+//SWITCH DEBUGGING
+#define DEBUG
+#define DEBUG_TEMP
 
 //GLOBAL VARS
 volatile int count=0; //encoder ticks
@@ -52,12 +55,6 @@ int main(void){
 	m_usb_init();
 	init_timer();
 
-<<<<<<< HEAD
-=======
-	set(PCICR,PCIE0); //enable PCINT
-	set(PCMSK0,PCINT7);//corresponds to pin mask
-
->>>>>>> pc_communication
 	//RESET
 	m_red(OFF);
 	m_green(OFF);
@@ -69,7 +66,6 @@ int main(void){
 
  	sei();//enable interrupts, start ticks
 
-<<<<<<< HEAD
  	//ENABLE PIN CHANGE INTERRUPTS: PCINT0 - D0
  	set(PCICR,PCIE0); //pin-change, cleared by default
  	set(PCMSK0,PCINT0); //remove mask for corresponding interrupt
@@ -124,27 +120,23 @@ int main(void){
 
 		// THERMAL ELEMENT USB DEBUG
 		temp = m_adc(F4);
-
-		m_usb_tx_string("TEMP: ");
-		m_usb_tx_int((int)(temp));
-		m_usb_tx_string("\r\n");
-
 		temp_diff = temp_desired - temp;
-
-		m_usb_tx_string("diff: ");
-		m_usb_tx_int((int)(temp_diff));
-		m_usb_tx_string("\r\n");
-
 		TECout = (float)(temp_diff*Kp_temp)/1023.0; //PID duty cycle for TEC
 
-		m_usb_tx_string("duty temp: ");
-		m_usb_tx_int((int)(TECout*100.0));
-		m_usb_tx_string("\r\n");
+		#ifdef DEBUG_TEMP
+			m_usb_tx_string("TEMP: ");
+			m_usb_tx_int((int)(temp));
+			m_usb_tx_string("diff: ");
+			m_usb_tx_int((int)(temp_diff));
+			m_usb_tx_string("duty temp: ");
+			m_usb_tx_int((int)(TECout*100.0));
+			m_usb_tx_string("\r\n");
+		#endif
 
 		m_pwm_duty(3, 1, TECout); //pin C6
 
 		m_wait(1);//ms
-=======
+
 	for (;;)
 	{
 		static uint64_t control_loop_last_run_time = 0;
@@ -184,7 +176,6 @@ int main(void){
 		
 		if (received_pc_message())
 			process_pc_message();
->>>>>>> pc_communication
 	}
 }
 
@@ -196,36 +187,19 @@ void driveMotor(int dir, float y_desired)
 	const uint64_t dt = current_time - prev_time;
 	const float Kp = 1.0;
 
-<<<<<<< HEAD
 
-	m_usb_tx_string("y_desired: ");
-	m_usb_tx_int((int)(y_desired));
-	m_usb_tx_string("\r\n");
-=======
 	#ifdef DEBUG
 		m_usb_tx_string("y_desired: ");
 		m_usb_tx_int((int)(y_desired));
 		m_usb_tx_string("\r\n");
 	#endif
->>>>>>> pc_communication
 
 	// y_desired=y_desired/MAXRPS * 100.0;//units
 
 	//CONTROL LOOP
 	float y_actual=(float) (count/TICKS)/((float)dt/1000000.0);//rps
 	y_actual/=FUDGE; //FUDGE FACTOR
-	m_usb_tx_string("y_actual: ");
-	m_usb_tx_int((int)(y_actual));
-	m_usb_tx_string("\r\n");
 
-<<<<<<< HEAD
-	float error = (y_desired-y_actual);//WHAT TO COMPARE HERE
-	m_usb_tx_string("error: ");
-	m_usb_tx_int((int)(error));
-	m_usb_tx_string("\r\n");
-
-
-=======
 	#ifdef DEBUG
 		m_usb_tx_string("error: ");
 		m_usb_tx_int((int)(error));
@@ -235,32 +209,18 @@ void driveMotor(int dir, float y_desired)
 		m_usb_tx_int((int)(y_actual));
 		m_usb_tx_string("\r\n");
 	#endif
->>>>>>> pc_communication
-	//boost old duty cycle to compensate
 
 	y_desired=y_desired/MAXRPS * 100.0;//percentage
-	error=error/MAXRPS*100;\
-
-<<<<<<< HEAD
- 	float duty_cycle=y_desired+(error*Kp); //expected output + gain
- 	if (duty_cycle>100.0)
- 	{
- 		duty_cycle=100.0;
- 	}
- 	if (duty_cycle<0.0)
- 	{
- 		duty_cycle=0.0;
- 	}
+	error=error/MAXRPS*100;
 
  	//update PWM duty cycle per the controller
  	m_pwm_duty(TIMER, CHANNEL, duty_cycle); //Timer 1, Channel 1: pin B6 
-=======
+
  	float duty_cycle = y_desired + (error * Kp); //expected output + gain
  	if (duty_cycle > 100.0)
  		duty_cycle = 100.0;
  	if (duty_cycle < 0.0)
  		duty_cycle = 0.0;
->>>>>>> pc_communication
 
 	#ifdef DEBUG
 		m_usb_tx_string("duty_cycle: ");
@@ -268,15 +228,13 @@ void driveMotor(int dir, float y_desired)
 		m_usb_tx_string("\r\n");
 	#endif
 
-<<<<<<< HEAD
  	clear_timer(); //reset
-=======
+
  	//PWM instructions
  	m_pwm_duty(TIMER, CHANNEL, duty_cycle);
 
 	count = 0;  // reset encoder count
  	prev_time = current_time;  // update the elapsed time, to get dt when this function is run next
->>>>>>> pc_communication
  }
 
 //INTERRUPTS

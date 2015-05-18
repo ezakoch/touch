@@ -285,7 +285,7 @@ bool base64_decode_stream (uint8_t **output, const char input)
 	
 	decode_buffer[decode_buffer_idx] = input;
 	decode_buffer_idx++;
-		
+	
 	if (decode_buffer_idx >= 4)
 	{
 		decode_4char (decode_buffer, *output);

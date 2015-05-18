@@ -1,7 +1,7 @@
 #ifndef PC_COMMUNICATION_H
 #define PC_COMMUNICATION_H
 
-#define MAX_MESSAGE_LENGTH 1024
+#define MAX_MESSAGE_LENGTH 512
 
 #ifdef ENABLE_PC_COMMUNICATION_TIMEOUT
 #define MESSAGE_TIMEOUT_US 2500
@@ -16,7 +16,7 @@ void process_pc_message (void);
 
 typedef struct
 {
-	uint64_t timestamp;
+	uint64_t timestamp_us;  // microseconds since the sensor was powered on
 	uint8_t num_accel_samples;
 	uint8_t accel[MAX_ACCEL_SAMPLES];  // acceleration, scaling should be done on the PC side so that this can be fed directly into a DAC
 	uint8_t temperatures[3];  // chip temp, board temp, ext. temp, where the temperatures should be in a range from 0=32F to 255=150F

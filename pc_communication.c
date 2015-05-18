@@ -101,7 +101,7 @@ inline uint8_t atoi_3digit (const char *a)
     return ((a[0] - 48) * 100) + ((a[1] - 48) * 10) + (a[2] - 48);
 }
 
-enum
+static enum
 {
     ECHO,      // for testing
     DATA,      // acceleration/slip/temperature/pressure from sensor
@@ -156,6 +156,9 @@ void process_pc_message (void)
             break;
         case DATA:
 			{
+				//Data format
+				// :DA<base64-encoded pc_data struct>;
+				
 				// decode the base64 string in-place to re-use the message buffer
 				// (will work because the base64 string is always longer than what it encoded)
 				uint8_t *decoded_end_ptr = message;
@@ -197,12 +200,4 @@ void process_pc_message (void)
 
 
 
-/*
-    Data format:
-        :DATA<base64-encoded current timer_ticks value>,<base64-encoded accelerometer values>;
-    or, if there are no accelerometer values in this message:
-        :DATA<base64-encoded current timer_ticks value>,-;
-    or, if the accelerometer isn't working:
-        :DATA<base64-encoded current timer_ticks value>,!;
-*/
 

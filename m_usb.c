@@ -135,13 +135,18 @@ int8_t usb_serial_set_control(uint8_t signals); // set DSR, DCD, RI, etc
  *
  **************************************************************************/
 
-#define STR_MANUFACTURER	L"J. Fiene"
-#define STR_PRODUCT		L"M2"
-#define STR_SERIAL_NUMBER	L"410"
-#define VENDOR_ID		0x16C0 // must match INF file in Windows
-#define PRODUCT_ID		0x047A // must match INF file in Windows
-#define TRANSMIT_FLUSH_TIMEOUT	5   /* in milliseconds */
-#define TRANSMIT_TIMEOUT	25   /* in milliseconds */
+/* Using Objective Development's VID/PID pair for serial CDC-ACM class devices
+   and abiding by its rules for discrimination by serial number.
+   See https://github.com/obdev/v-usb/blob/master/usbdrv/USB-IDs-for-free.txt
+*/
+
+#define STR_MANUFACTURER        L"UPenn Haptics Lab:haptics.seas.upenn.edu"
+#define STR_PRODUCT	            L"Project Touch Actuator"
+#define STR_SERIAL_NUMBER       L"haptics.seas.upenn.edu: Project Touch Actuator"
+#define VENDOR_ID               0x16C0
+#define PRODUCT_ID              0x27DD
+#define TRANSMIT_FLUSH_TIMEOUT  5   /* in milliseconds */
+#define TRANSMIT_TIMEOUT        25   /* in milliseconds */
 #define SUPPORT_ENDPOINT_HALT // can save 116 bytes by removing, makes fully USB compliant
 
 /**************************************************************************

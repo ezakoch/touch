@@ -24,7 +24,7 @@
 #define FUDGE 4
 
 //SWITCH DEBUGGING
-// #define DEBUG
+#define DEBUG
 // #define DEBUG_TEMP
 
 //GLOBAL VARS
@@ -96,7 +96,7 @@ int main(void){
 			//Edit PWM duty cycle
 			pot_state = m_adc(F6); 
 
-			y_desired=(float)MAXRPS*(pot_state/1023.0); //rps
+			y_desired=(float)MAXRPS*(pot_state/1023.0); //[rps]
 
 			//BUTTON PRESS
 			if (m_gpio_in(D4)==ON){state=1;}
@@ -132,7 +132,7 @@ void driveMotor(int dir, float y_desired){
 	
 	const uint64_t current_time = us_elapsed();
 	const uint64_t dt = current_time - prev_time;
-	const float Kp = 1.0;
+	const float Kp = 10.0;
 
 
 	#ifdef DEBUG
@@ -141,16 +141,14 @@ void driveMotor(int dir, float y_desired){
 		m_usb_tx_string("\r\n");
 	#endif
 
-	// y_desired=y_desired/MAXRPS * 100.0;//units
-
 	//CONTROL LOOP
 	float y_actual=(float) (count/TICKS)/((float)dt/1000000.0);//rps
 	y_actual/=FUDGE; //FUDGE FACTOR
-	y_desired=y_desired/MAXRPS * 100.0;//percentage
 
-	float error=y_desired-y_actual;
+	float error=y_desired-y_actual; //[rps]
+	error=error/MAXRPS*100;// [%] 
 
-	error=error/MAXRPS*100;
+	y_desired=y_desired/MAXRPS * 100.0;//back to percent for duty cycle command
 
 	#ifdef DEBUG
 		m_usb_tx_string("error: ");

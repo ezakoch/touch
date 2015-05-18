@@ -20,7 +20,7 @@
 #define FREQ 40000.0 //floating point in Hz, aim for 20kHz
 #define CHANNEL 1 //Pin D0 for motor PWM
 #define MAXRPS 83.3 //Maxon 144325 assembly with gearhead 5000.0/60.0
-#define TICKS 16.0 //per revolution
+#define TICKS 500 //counts per turn
 #define FUDGE 4
 
 //SWITCH DEBUGGING

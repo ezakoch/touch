@@ -1,7 +1,7 @@
 #include "timer_ticks.h"
 #include <avr/interrupt.h>
 
-volatile uint64_t timer_ticks = 0;  // number of timer0 interrupts since either power-on or the last call to clear_timer()
+volatile static uint64_t timer_ticks = 0;  // number of timer0 interrupts since either power-on or the last call to clear_timer()
 
 ISR (TIMER0_COMPA_vect)
 {
@@ -54,11 +54,4 @@ uint64_t us_elapsed (void)
 uint64_t us_since (const uint64_t timer_tick)
 {
 	return (get_timer_ticks() - timer_tick) * US_PER_TIMER_TICK;
-}
-
-void clear_timer (void)
-{
-	cli();
-	timer_ticks = 0;
-	sei();
 }

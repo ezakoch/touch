@@ -15,7 +15,6 @@ void init_timer (void);
 uint64_t get_timer_ticks (void);
 uint64_t us_elapsed (void);
 uint64_t us_since (const uint64_t timer_tick);
-void clear_timer (void);
 
 // the following macro ugliness tries to determine a good prescaler value at compile time:
 #define PRESCALER 1

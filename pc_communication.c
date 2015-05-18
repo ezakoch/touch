@@ -4,8 +4,8 @@
 #include "pc_communication.h"
 #include "base64.h"
 
-uint8_t message[MAX_MESSAGE_LENGTH];
-uint8_t *message_ptr = message;
+static uint8_t message[MAX_MESSAGE_LENGTH];
+static uint8_t *message_ptr = message;
 
 pc_data latest_pc_data;
 
@@ -69,12 +69,12 @@ bool received_pc_message (void)
     return false;
 }
 
-inline void clear_pc_message (void)
+static inline void clear_pc_message (void)
 {  // to be called when a message has been processed
     message_ptr = message;
 }
 
-inline uint8_t atoi_2digit (const char *a)
+static inline uint8_t atoi_2digit (const char *a)
 {
     // ASCII '0' is 48
     
@@ -87,7 +87,7 @@ inline uint8_t atoi_2digit (const char *a)
     return ((a[0] - 48) * 10) + (a[1] - 48);
 }
 
-inline uint8_t atoi_3digit (const char *a)
+static inline uint8_t atoi_3digit (const char *a)
 {
     // ASCII '0' is 48
     
@@ -184,6 +184,10 @@ void process_pc_message (void)
 				}
 				else
 				{
+					// copy the decoded data into our waiting structure
+					pc_data *pc_ptr = (pc_data*)message;
+					latest_pc_data = *pc_ptr;
+					
 					m_usb_tx_string (":DAOK;");  // debug: indicate successful message
 				}
 			}

@@ -20,7 +20,7 @@ PARENTS    = m_usb.o
 # if you want to use one of our pre-compiled libraries,
 # add it to the line below (e.g. "LIBRARIES = libsaast.a")
 # --------------------------------------------------------
-LIBRARIES = libsaast.a
+LIBRARIES =
 # --------------------------------------------------------
 # you shouldn't change anything below here,
 # unless you really know what you're doing

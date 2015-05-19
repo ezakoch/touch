@@ -13,6 +13,8 @@ Library Inclusions
 #include "m_bus.h"
 #include "timer_ticks.h"
 #include "pc_communication.h"
+#include "motor_pwm.h"
+#include "adc.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -43,7 +45,7 @@ volatile int count=0; //encoder ticks
 // Initialize Helper Functions
 // -----------------------------------------------------------------------------
 void driveMotor(int dir, float rps_desired);
-int adc(void);
+//int adc(void);
 void disableMotor(void);
 // -----------------------------------------------------------------------------
 // MAIN
@@ -72,12 +74,13 @@ int main(void){
 	// USB COMMUNICATIONS
 	// ls /dev/tty.*
 	// screen /dev/tty.usbmodem###
-	// To end the session, press Ctrl-A then Ctrl-\
 	// -----------------------------------------------------------------------------
 
 	m_usb_init();
-	init_timer(); //do i need this?
-
+	init_timer();
+	init_motor_pwm (MOTOR_CHANNEL_1B);
+	init_adc();
+/*
 	// -----------------------------------------------------------------------------
 	// Setup PWM - Timer 1 Pin B6
 	// -----------------------------------------------------------------------------
@@ -117,7 +120,7 @@ int main(void){
 	ADMUX = (ADMUX & 0xE0) | CHANNEL;
 
 	clear(DDRD,4); //Digital In: D4
-
+*/
 	// -----------------------------------------------------------------------------
 	// SETUP INTERRUPTS: PIN CHANGE PCINT0 pin D0
 	// -----------------------------------------------------------------------------
@@ -160,7 +163,10 @@ int main(void){
 		if (us_elapsed() - control_loop_last_run_time > 20000ul)
 		{
 			//ADC user input from potentiometer
-			pot_state = adc(); 
+			cli();
+			pot_state = adc_values.pot;
+			sei();
+			
 			#ifdef DEBUG
 				m_usb_tx_string("pot_state: ");
 				m_usb_tx_int((int)(pot_state));
@@ -246,9 +252,12 @@ void driveMotor (int dir, float rps_desired){
 		duty_cycle = 0.0;
 	
  	//m_pwm_duty(TIMER, CHANNEL, duty_cycle); //Timer 1, Channel 1: pin B6 
+	/*
 	set(DDRB,6);		// take over the output
 	set(TCCR1A,COM1B1);	// clear on match with OCR1B
  	OCR1B = (unsigned int)((float)OCR1A*(duty_cycle/100.0)); //Timer 1, Channel 1: pin B6 
+	 */
+	set_motor_duty_pct((uint8_t)duty_cycle);
 	
 	#ifdef DEBUG
 		m_usb_tx_string("duty_cycle: ");
@@ -264,13 +273,13 @@ void driveMotor (int dir, float rps_desired){
 // -----------------------------------------------------------------------------
 //  ADC CONVERSIONS
 // -----------------------------------------------------------------------------
-int adc(void){
+/*int adc(void){
 	set(ADCSRA,ADEN);			// enable ADC
 	set(ADCSRA,ADSC);			// start conversion
 	while(!check(ADCSRA,ADIF)){}; // wait for conversion to finish
 	set(ADCSRA,ADIF);			// reset the flag
 	return ADC;					// pass back the result
-}
+}*/
 // -----------------------------------------------------------------------------
 //  DISABLE MOTORS
 // -----------------------------------------------------------------------------

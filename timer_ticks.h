@@ -3,8 +3,7 @@
 
 #include <avr/io.h>
 
-// the timing resolution can go down to a couple dozen microseconds if you need it to, though
-// you'll probably have to change the prescaler from /64 to /8
+// the timing resolution can go down to a couple dozen microseconds, though I don't recommend it
 
 #define US_PER_TIMER_TICK 128
 #define CYCLES_PER_US (F_CPU / 1000000)

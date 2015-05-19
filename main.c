@@ -7,7 +7,6 @@ author: Eza Koch and Kent deVillafranca
 Library Inclusions
 ---------------------------------------------------------------------------*/
 
-//#include "saast.h" //SAAST Library
 #include "m_general.h"
 #include "m_usb.h"
 #include "m_bus.h"
@@ -24,9 +23,6 @@ Library Inclusions
 // -----------------------------------------------------------------------------
 // Definitions
 // -----------------------------------------------------------------------------
-#define TIMER 1 //Timers 0,1,3,4 availabl1
-#define FREQ 40000.0 //floating point in Hz, aim for 40kHz
-#define CHANNEL 1 //Pin D0 for motor PWM
 #define MAXRPS (83.3 / 5) //Maxon 144325 assembly with gearhead 5000.0/60.0
 // (divided by 5 for fudge factor)
 
@@ -47,7 +43,6 @@ volatile int count=0; //encoder ticks
 // Initialize Helper Functions
 // -----------------------------------------------------------------------------
 void driveMotor(int dir, float rps_desired);
-//int adc(void);
 void disableMotor(void);
 
 float error_sum = 0;
@@ -65,8 +60,6 @@ int main(void){
 	// Variables
 	// -----------------------------------------------------------------------------
 	int dir = 0;
-	float pot_state;
-	float y_desired;
 	float temp;
 	float temp_diff;
 	float temp_desired = 600.0; //need a separate sensor to check the surface
@@ -85,47 +78,7 @@ int main(void){
 	init_timer();
 	init_motor_pwm (MOTOR_CHANNEL_1B);
 	init_adc();
-/*
-	// -----------------------------------------------------------------------------
-	// Setup PWM - Timer 1 Pin B6
-	// -----------------------------------------------------------------------------
-	//m_pwm_timer(TIMER, FREQ);
-	set(TCCR1B,WGM13);	// up to OCR1A (max 65535)
-	set(TCCR1B,WGM12);	// ^
-	set(TCCR1A,WGM11);	// ^
-	set(TCCR1A,WGM10);	// ^
-	TCNT1 = 0;// reset counter
-	OCR1A = (16000000/FREQ);//>250Hz		
-	set(TCCR1B,CS10);	
-	clear(TCCR1B,CS11);
-	clear(TCCR1B,CS12);
- 	//m_pwm_output(TIMER, CHANNEL, ON);
-	set(DDRB,6);		// take over the output
-	set(TCCR1A,COM1B1);	// clear on match with OCR1B
 
-	// -----------------------------------------------------------------------------
-	// Setup ADC and GPIO
-	// -----------------------------------------------------------------------------
-
-	set(ADMUX,REFS0);		// voltage ref to Vcc
-	clear(ADMUX,REFS1);		// ^
-//	set(ADCSRB,ADHSM);		// enable high-speed mode
-	set(ADCSRA,ADPS0);		// prescaler to /128 = 125kHz
-	set(ADCSRA,ADPS1);		// ^ 
-	set(ADCSRA,ADPS2);		// ^
-
-	clear(ADCSRB,MUX5); // configure the specified channel: ADC6 pin F6
-	set(ADMUX,MUX2);    // ^
-	set(ADMUX,MUX1);   // ^
-	clear(ADMUX,MUX0);  // ^
-
-	set(DIDR0,ADC7D);// Disable digital input circuitry for bit 7
-	//set(ADATE,ADCSRA);//triggering
-	//set(DIDR0,CHANNEL); // ^ ??
-	ADMUX = (ADMUX & 0xE0) | CHANNEL;
-
-	clear(DDRD,4); //Digital In: D4
-*/
 	// -----------------------------------------------------------------------------
 	// SETUP INTERRUPTS: PIN CHANGE PCINT0 pin D0
 	// -----------------------------------------------------------------------------
@@ -169,7 +122,7 @@ int main(void){
 		{
 			//ADC user input from potentiometer
 			cli();
-			pot_state = adc_values.pot;
+			const uint16_t pot_state = adc_values.pot;
 			sei();
 			
 			#ifdef DEBUG
@@ -177,9 +130,9 @@ int main(void){
 				m_usb_tx_int((int)(pot_state));
 				m_usb_tx_string("\r\n");
 			#endif
-			y_desired=(float)MAXRPS*(pot_state/1023.0); //[rps]
+			const float y_desired=(float)MAXRPS*(((float)pot_state)/1023.0); //[rps]
 
-			//Digital GPIO: Swithcing Motor ON/OFF
+			//Digital GPIO: Switching Motor ON/OFF
 			if (check(PIND,4)){disableMotor();m_red(ON);m_green(OFF);}
 			else{driveMotor(dir, y_desired);m_green(ON);m_red(OFF);}
 			
@@ -256,12 +209,6 @@ void driveMotor (int dir, float rps_desired){
 	if (duty_cycle < 0.0)
 		duty_cycle = 0.0;
 	
- 	//m_pwm_duty(TIMER, CHANNEL, duty_cycle); //Timer 1, Channel 1: pin B6 
-	/*
-	set(DDRB,6);		// take over the output
-	set(TCCR1A,COM1B1);	// clear on match with OCR1B
- 	OCR1B = (unsigned int)((float)OCR1A*(duty_cycle/100.0)); //Timer 1, Channel 1: pin B6 
-	 */
 	set_motor_duty_pct((uint8_t)duty_cycle);
 	
 	#ifdef DEBUG
@@ -275,16 +222,6 @@ void driveMotor (int dir, float rps_desired){
  	prev_time = current_time;  // update the elapsed time, to get dt when this function is run next
 }
 
-// -----------------------------------------------------------------------------
-//  ADC CONVERSIONS
-// -----------------------------------------------------------------------------
-/*int adc(void){
-	set(ADCSRA,ADEN);			// enable ADC
-	set(ADCSRA,ADSC);			// start conversion
-	while(!check(ADCSRA,ADIF)){}; // wait for conversion to finish
-	set(ADCSRA,ADIF);			// reset the flag
-	return ADC;					// pass back the result
-}*/
 // -----------------------------------------------------------------------------
 //  DISABLE MOTORS
 // -----------------------------------------------------------------------------

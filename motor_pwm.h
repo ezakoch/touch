@@ -3,6 +3,8 @@
 
 #include <avr/io.h>
 
+#define MOTOR_PWM_FREQ 40000
+
 typedef enum
 {
 	MOTOR_CHANNEL_1A,

@@ -1,30 +1,30 @@
 #include "motor_pwm.h"
 
-#define MOTOR_PWM_FREQ 40000
+#define MOTOR_PWM_COUNTS (MOTOR_PWM_FREQ * 2)
 
 #define MOTOR_PRESCALER 1
-#if ((F_CPU / MOTOR_PRESCALER) / MOTOR_PWM_FREQ > 65535)
+#if ((F_CPU / MOTOR_PRESCALER) / MOTOR_PWM_COUNTS > 65535)
 	#undef MOTOR_PRESCALER
 	#define MOTOR_PRESCALER 8
 #endif
-#if ((F_CPU / MOTOR_PRESCALER) / MOTOR_PWM_FREQ > 65535)
+#if ((F_CPU / MOTOR_PRESCALER) / MOTOR_PWM_COUNTS > 65535)
 	#undef MOTOR_PRESCALER
 	#define MOTOR_PRESCALER 64
 #endif
-#if ((F_CPU / MOTOR_PRESCALER) / MOTOR_PWM_FREQ > 65535)
+#if ((F_CPU / MOTOR_PRESCALER) / MOTOR_PWM_COUNTS > 65535)
 	#undef MOTOR_PRESCALER
 	#define MOTOR_PRESCALER 256
 #endif
-#if ((F_CPU / MOTOR_PRESCALER) / MOTOR_PWM_FREQ > 65535)
+#if ((F_CPU / MOTOR_PRESCALER) / MOTOR_PWM_COUNTS > 65535)
 	#undef MOTOR_PRESCALER
 	#define MOTOR_PRESCALER 1024
 #endif
-#if ((F_CPU / MOTOR_PRESCALER) / MOTOR_PWM_FREQ > 65535)
-	#error MOTOR_PWM_FREQ is too low
+#if ((F_CPU / MOTOR_PRESCALER) / MOTOR_PWM_COUNTS > 65535)
+	#error MOTOR_PWM_COUNTS is too low
 #endif
 
-#if ((F_CPU / MOTOR_PRESCALER) / MOTOR_PWM_FREQ < 100)
-	#error MOTOR_PWM_FREQ is too high
+#if ((F_CPU / MOTOR_PRESCALER) / MOTOR_PWM_COUNTS < 100)
+	#error MOTOR_PWM_COUNTS is too high
 #endif
 
 static motor_pwm_channel output;
@@ -36,7 +36,7 @@ void init_motor_pwm (motor_pwm_channel output_channel)
 	TCCR1B = (1 << WGM13);
 	
 	// timer top value
-	ICR1 = (F_CPU / MOTOR_PRESCALER) / MOTOR_PWM_FREQ;
+	ICR1 = (F_CPU / MOTOR_PRESCALER) / MOTOR_PWM_COUNTS;
 	
 	// initial duty cycle of 0
 	OCR1A = 0;

@@ -34,7 +34,7 @@
 // #define DEBUG_TEMP
 
 // -----------------------------------------------------------------------------
-// Globals
+// Global Variables
 // -----------------------------------------------------------------------------
 volatile int count=0; //encoder ticks
 
@@ -268,7 +268,9 @@ int adc(void){
 	set(ADCSRA,ADIF);			// reset the flag
 	return ADC;					// pass back the result
 }
-
+// -----------------------------------------------------------------------------
+//  DISABLE MOTORS
+// -----------------------------------------------------------------------------
 void disableMotor(void){
 	set(DDRB,6);		// take over the output
 	set(TCCR1A,COM1B1);	// clear on match with OCR1B

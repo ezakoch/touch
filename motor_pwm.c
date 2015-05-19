@@ -49,12 +49,15 @@ void init_motor_pwm (motor_pwm_channel output_channel)
 	switch (output)
 	{
 		case MOTOR_CHANNEL_1A:
+			DDRB |= (1 << 5);
 			TCCR1A = (1 << COM1A1);
 			break;
 		case MOTOR_CHANNEL_1B:
+			DDRB |= (1 << 6);
 			TCCR1A = (1 << COM1B1);
 			break;
 		case MOTOR_CHANNEL_1C:
+			DDRB |= (1 << 7);
 			TCCR1A = (1 << COM1C1);
 			break;
 		case MOTOR_CHANNEL_NONE:

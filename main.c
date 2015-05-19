@@ -27,7 +27,9 @@ Library Inclusions
 #define TIMER 1 //Timers 0,1,3,4 availabl1
 #define FREQ 40000.0 //floating point in Hz, aim for 40kHz
 #define CHANNEL 1 //Pin D0 for motor PWM
-#define MAXRPS 83.3 //Maxon 144325 assembly with gearhead 5000.0/60.0
+#define MAXRPS (83.3 / 5) //Maxon 144325 assembly with gearhead 5000.0/60.0
+// (divided by 5 for fudge factor)
+
 #define TICKS 500.0 //counts per turn 110514 encoder
 
 // -----------------------------------------------------------------------------
@@ -47,6 +49,9 @@ volatile int count=0; //encoder ticks
 void driveMotor(int dir, float rps_desired);
 //int adc(void);
 void disableMotor(void);
+
+float error_sum = 0;
+
 // -----------------------------------------------------------------------------
 // MAIN
 // -----------------------------------------------------------------------------
@@ -159,8 +164,8 @@ int main(void){
 	{
 		static uint64_t control_loop_last_run_time = 0;
 		
-		// run the control loop roughly once every 20000us=20ms
-		if (us_elapsed() - control_loop_last_run_time > 20000ul)
+		// run the control loop roughly once every 1000us=1ms
+		if (us_elapsed() - control_loop_last_run_time > 1000ul)
 		{
 			//ADC user input from potentiometer
 			cli();
@@ -189,16 +194,16 @@ int main(void){
 // -----------------------------------------------------------------------------
 //  PID CONTORLLER AND MOTOR DRIVER
 // -----------------------------------------------------------------------------
+
 void driveMotor (int dir, float rps_desired){
 	static uint64_t prev_time = 0;
 	static float prev_error = 0;
-	static float error_sum = 0;
 	
 	const uint64_t current_time = us_elapsed();
 	const float dt = (float)(current_time - prev_time);
-	const float Kp = 5.0;
+	const float Kp = 1.0;
 	const float Kd = 0.0;
-	const float Ki = 0.0;
+	const float Ki = 0.00003;
 
 	const float revs = (float)count / (float)TICKS;
 	const float rps_actual = revs * 1e6 / dt;
@@ -284,8 +289,8 @@ void driveMotor (int dir, float rps_desired){
 //  DISABLE MOTORS
 // -----------------------------------------------------------------------------
 void disableMotor(void){
-	set(DDRB,6);		// take over the output
-	set(TCCR1A,COM1B1);	// clear on match with OCR1B
+	set_motor_duty_pct(0);
+	error_sum = 0;  // prevent windup when disabled
 }
 // -----------------------------------------------------------------------------
 // INTERRUPTS

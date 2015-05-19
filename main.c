@@ -1,6 +1,6 @@
-//Sending values using Wireless
+// TOUCH Actuator Controller on M2 (Atmega32u4)
 // cd Dropbox/TOUCH/m2
-// Eza Koch
+// author: Eza Koch and Kent deVillafranca
 
 //INCLUDES
 #include "saast.h" //SAAST Library calls
@@ -17,9 +17,10 @@
 
 //DEFINE CONSTANTS
 #define TIMER 1 //Timers 0,1,3,4 availabl1
-#define FREQ 40000.0 //floating point in Hz, aim for 20kHz
+#define FREQ 40000.0 //floating point in Hz, aim for 40kHz
 #define CHANNEL 1 //Pin D0 for motor PWM
 #define MAXRPS 83.3 //Maxon 144325 assembly with gearhead 5000.0/60.0
+#define TICKS 500.0 //counts per turn 110514 encoder
 
 //SWITCH DEBUGGING
 #define DEBUG
@@ -33,11 +34,13 @@ void driveMotor(int dir, float rps_desired);
 
 //MAIN FUNCTION
 int main(void){
+	
 	//Vars
-	m_clockdivide(0);
+	m_clockdivide(0); //16MHz
 	m_disableJTAG();
-	int state=0;
-	int dir=0;
+
+	int state = 0;
+	int dir = 0;
 	float pot_state;
 	float y_desired;
 	float temp;
@@ -68,6 +71,7 @@ int main(void){
  	set(PCMSK0,PCINT0); //remove mask for corresponding interrupt
 
 	// THERMAL ELEMENT USB DEBUG
+	/*
 	temp = m_adc(F4);
 	temp_diff = temp_desired - temp;
 	TECout = (float)(temp_diff*Kp_temp)/1023.0; //PID duty cycle for TEC
@@ -83,13 +87,16 @@ int main(void){
 	#endif
 
 	m_pwm_duty(3, 1, TECout); //pin C6
+	*/
+
+	
 
 	for (;;)
 	{
 		static uint64_t control_loop_last_run_time = 0;
 		
-		// run the control loop roughly once every millisecond
-		if (us_elapsed() - control_loop_last_run_time > 1000ul)
+		// run the control loop roughly once every 20000us=20ms
+		if (us_elapsed() - control_loop_last_run_time > 20000ul)
 		{
 			//Edit PWM duty cycle
 			pot_state = m_adc(F6); 
@@ -105,8 +112,7 @@ int main(void){
 				case 0:
 					m_red(ON);
 					m_green(OFF);
-					dir=1;
-					driveMotor(dir, 0.0); //stop
+					m_pwm_duty(TIMER, CHANNEL, 0);
 					break;
 				case 1:
 					m_red(OFF);
@@ -118,6 +124,7 @@ int main(void){
 			
 			control_loop_last_run_time = us_elapsed();
 		}
+		
 		
 		if (received_pc_message())
 			process_pc_message();
@@ -134,9 +141,9 @@ void driveMotor (int dir, float rps_desired){
 	
 	const float dt = (float)(current_time - prev_time);
 	
-	const float Kp = 1.0;
-	const float Kd = 0.0;  // start with just PI control for now
-	const float Ki = 0.1;
+	const float Kp = 5.0;
+	const float Kd = 0.0;
+	const float Ki = 0.0;
 
 	// PID CONTROL LOOP
 	const float revs = (float)count / (float)TICKS;
@@ -144,6 +151,10 @@ void driveMotor (int dir, float rps_desired){
 	const float error = rps_desired - rps_actual;
 
 	#ifdef DEBUG
+		m_usb_tx_string ("Time (ms) = ");
+		m_usb_tx_int ((unsigned int)(current_time / 1000));
+		m_usb_tx_string ("\r\n");
+
 		m_usb_tx_string("rps_desired: ");
 		m_usb_tx_int((int)(rps_desired));
 		m_usb_tx_string("\r\n");
@@ -158,9 +169,23 @@ void driveMotor (int dir, float rps_desired){
 	#endif
 	
 	error_sum += (error * dt);
+	if (error_sum * Ki > 100.0) //windup
+		error_sum = 100.0 / Ki;
+
 	const float error_diff = (error - prev_error) / dt;
 	
- 	float duty_cycle = (error * Kp) + (error_diff * Kd) + (error_sum * Ki);
+ 	float duty_cycle = (rps_desired) + (error * Kp) + (error_diff * Kd) + (error_sum * Ki);
+ 	
+ 	#ifdef DEBUG
+ 		m_usb_tx_string ("I term: ");
+ 		m_usb_tx_int ((int)(error_sum * Ki));
+		m_usb_tx_string ("\r\nerror_diff: ");
+ 		m_usb_tx_int ((int)error_diff);
+		m_usb_tx_string("\r\nduty_cycle before cap: ");
+		m_usb_tx_int((int)(duty_cycle));
+		m_usb_tx_string("\r\n===================\r\n");
+	#endif
+
  	if (duty_cycle > 100.0)
 		duty_cycle = 100.0;
 	if (duty_cycle < 0.0)
@@ -174,9 +199,6 @@ void driveMotor (int dir, float rps_desired){
 		m_usb_tx_int((int)(duty_cycle));
 		m_usb_tx_string("\r\n===================\r\n");
 	#endif
-	
- 	//PWM instructions
- 	m_pwm_duty(TIMER, CHANNEL, duty_cycle);
 	
 	count = 0;  // reset encoder count
 	prev_error = error;  // update the previous error record

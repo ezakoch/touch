@@ -87,13 +87,15 @@ int main(void){
  	set(PCMSK0,PCINT0); //remove mask for corresponding interrupt
 
  	// -----------------------------------------------------------------------------
-	// SETUP TIMER 3 INTERRUPTS TO HANDLE ACCEL PACKAGES
+	// SETUP TIMER 4 INTERRUPTS TO HANDLE ACCEL PACKAGES
 	// -----------------------------------------------------------------------------
 	
- 	set(CS43,TCCR4B); //Prescalar /16384= 976.5625Hz
- 	set(CS42,TCCR4B); //^
- 	set(CS41,TCCR4B); //^
- 	set(CS40,TCCR4B); //^
+ 	clear(CS43,TCCR4B); //Prescalar /32= 500kHz
+ 	set(CS42,TCCR4B);   //^
+ 	set(CS41,TCCR4B);   //^
+ 	clear(CS40,TCCR4B); //^
+
+ 	OCR4A = 625; //500000/625=800Hz Target Frequency, max 1023
 
  	set(PWM4A,TCCR4A);     //CLEAR at compare with OCR4A, SET at 0x00
  	set(COM4A1,TCCR4A);    //^

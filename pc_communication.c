@@ -8,7 +8,7 @@ static uint8_t message[MAX_MESSAGE_LENGTH];
 static uint8_t *message_ptr = message;
 
 pc_data latest_pc_data;
-bool new_data = false;
+static bool new_data = false;
 
 bool new_pc_data (void)
 {

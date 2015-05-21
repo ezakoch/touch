@@ -102,6 +102,26 @@ static inline void set_motor_duty (uint16_t compare)
 	}
 }
 
+static inline uint16_t get_motor_duty (void)
+{
+	switch (output)
+	{
+		case MOTOR_CHANNEL_1A:
+			return OCR1A;
+			break;
+		case MOTOR_CHANNEL_1B:
+			return OCR1B;
+			break;
+		case MOTOR_CHANNEL_1C:
+			return OCR1C;
+			break;
+		case MOTOR_CHANNEL_NONE:
+			break;
+	}
+	
+	return 0;
+}
+
 void set_motor_duty_pct (uint8_t duty)
 {
 	if (duty > 100)
@@ -113,4 +133,14 @@ void set_motor_duty_pct (uint8_t duty)
 void set_motor_duty_8bit (uint8_t duty)
 {
 	set_motor_duty ((uint16_t)(((uint32_t)duty * (uint32_t)ICR1) / 256));
+}
+
+uint8_t get_motor_duty_pct (void)
+{
+	return (uint32_t)get_motor_duty() * 100ul / (uint32_t)ICR1;
+}
+
+uint8_t get_motor_duty_8bit (void)
+{
+	return (uint32_t)get_motor_duty() * 256ul / (uint32_t)ICR1;
 }

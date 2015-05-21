@@ -14,7 +14,9 @@ typedef enum
 } motor_pwm_channel;
 
 void init_motor_pwm (motor_pwm_channel channel);
-void set_motor_duty_pct (uint8_t duty);  // duty should go from 0 to 100
-void set_motor_duty_8bit (uint8_t duty);  // duty can be from 0 to 255
+void set_motor_duty_pct (uint8_t duty);  /* duty should go from 0 to 100 */
+void set_motor_duty_8bit (uint8_t duty);  /* duty can be from 0 to 255 */
+uint8_t get_motor_duty_pct (void);  /* returns the duty cycle as a value from 0 to 100 */
+uint8_t get_motor_duty_8bit (void);  /* returns the duty cycle as a value from 0 to 255 */
 
 #endif

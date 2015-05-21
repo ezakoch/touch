@@ -8,6 +8,18 @@ static uint8_t message[MAX_MESSAGE_LENGTH];
 static uint8_t *message_ptr = message;
 
 pc_data latest_pc_data;
+bool new_data = false;
+
+bool new_pc_data (void)
+{
+	return new_data;
+}
+
+pc_data *get_pc_data (void)
+{
+	new_data = false;
+	return &latest_pc_data;
+}
 
 // message format:
 //  : (colon) = start of message
@@ -187,6 +199,7 @@ void process_pc_message (void)
 					// copy the decoded data into our waiting structure
 					pc_data *pc_ptr = (pc_data*)message;
 					latest_pc_data = *pc_ptr;
+					new_data = true;
 					
 					m_usb_tx_string (":DAOK;");  // debug: indicate successful message
 				}

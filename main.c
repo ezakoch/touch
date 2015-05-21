@@ -157,7 +157,15 @@ int main(void){
 		}
 
 		if (received_pc_message())
+		{
 			process_pc_message();
+			
+			if (new_pc_data())
+			{
+				pc_data *latest_data = get_pc_data();
+				/* TODO: Store the acceleration and slip info somewhere for later use */
+			}
+		}
 	}
 }
 

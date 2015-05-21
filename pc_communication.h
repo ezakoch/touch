@@ -1,6 +1,8 @@
 #ifndef PC_COMMUNICATION_H
 #define PC_COMMUNICATION_H
 
+#include <stdbool.h>
+
 #define MAX_MESSAGE_LENGTH 512
 
 #ifdef ENABLE_PC_COMMUNICATION_TIMEOUT
@@ -23,5 +25,8 @@ typedef struct
 	int16_t slip;  // x-axis speed
 	uint8_t softness;  // some 0-255 measure of "softness", to be determined on the PC side by comparing finger FSR readings against the surface FSR
 } pc_data;
+
+bool new_pc_data (void);
+pc_data *get_pc_data (void);
 
 #endif

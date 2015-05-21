@@ -82,10 +82,25 @@ int main(void){
 	// -----------------------------------------------------------------------------
 	// SETUP INTERRUPTS: PIN CHANGE PCINT0 pin D0
 	// -----------------------------------------------------------------------------
- 	sei();//enable interrupts
+ 	sei();//enable global interrupts
  	set(PCICR,PCIE0); //pin-change, cleared by default
  	set(PCMSK0,PCINT0); //remove mask for corresponding interrupt
+
+ 	// -----------------------------------------------------------------------------
+	// SETUP TIMER 3 INTERRUPTS TO HANDLE ACCEL PACKAGES
+	// -----------------------------------------------------------------------------
 	
+ 	set(CS43,TCCR4B); //Prescalar /16384= 976.5625Hz
+ 	set(CS42,TCCR4B); //^
+ 	set(CS41,TCCR4B); //^
+ 	set(CS40,TCCR4B); //^
+
+ 	set(PWM4A,TCCR4A);     //CLEAR at compare with OCR4A, SET at 0x00
+ 	set(COM4A1,TCCR4A);    //^
+ 	clearl(COM4A0,TCCR4A); //^
+
+ 	set(OCIE4A,TIMSK4); //Interrupt TCNT4 matches OCR4A
+
 	// -----------------------------------------------------------------------------
 	// THERMAL ELEMENT USB DEBUG
 	// -----------------------------------------------------------------------------
@@ -233,5 +248,9 @@ void disableMotor(void){
 // INTERRUPTS
 // -----------------------------------------------------------------------------
 ISR(PCINT0_vect){count++;} //Timer 0, pin B0
+ISR(TIMER4_COMPA){ //Timer 4 Interrupt Handler: TCNT4 matches OCR4A 
+	//handle accel
+	OCR1A+=accel;
+} 
 
 

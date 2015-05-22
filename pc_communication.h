@@ -20,7 +20,7 @@ typedef struct
 {
 	uint64_t timestamp_us;  // microseconds since the sensor was powered on
 	uint8_t num_accel_samples;
-	uint8_t accel[MAX_ACCEL_SAMPLES];  // acceleration, scaling should be done on the PC side so that this can be fed directly into a DAC
+	int8_t accel[MAX_ACCEL_SAMPLES];  // acceleration
 	uint8_t temperatures[3];  // chip temp, board temp, ext. temp, where the temperatures should be in a range from 0=32F to 255=150F
 	int16_t slip;  // x-axis speed
 	uint8_t softness;  // some 0-255 measure of "softness", to be determined on the PC side by comparing finger FSR readings against the surface FSR

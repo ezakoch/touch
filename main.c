@@ -89,14 +89,11 @@ int main(void){
  	// -----------------------------------------------------------------------------
 	// SETUP TIMER 4 INTERRUPTS TO HANDLE ACCEL PACKAGES
 	// -----------------------------------------------------------------------------
-	
  	TCCR4B = (1 << CS41) | (1 << CS42); //Prescalar /32= 500kHz
 
- 	// (OVERFLOW HERE !!!)
-    OCR4A = 625; //500000/625=800Hz Target Frequency, max 1023
-
- 	TCCR4A = (1 << PWM4A) | (1 << COM4A1); // CLEAR at compare with OCR4A, SET at 0x00
-	// (Why is timer4's output being sent to a pin?  We only need the compare match interrupt)
+	// set Timer4's compare match value so that the match interrupt fires at 800Hz
+	TC4H = (625 >> 8)
+	OCR4A = (625 & 0xff); //500000/625=800Hz Target Frequency, max 1023
 
  	set(TIMSK4, OCIE4A); //Interrupt TCNT4 matches OCR4A
 

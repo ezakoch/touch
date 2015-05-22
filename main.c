@@ -91,24 +91,12 @@ int main(void){
 	// -----------------------------------------------------------------------------
 	
  	TCCR4B = (1 << CS41) | (1 << CS42); //Prescalar /32= 500kHz
-	
-	/*
-	clear(CS43,TCCR4B); //Prescalar /32= 500kHz
- 	set(CS42,TCCR4B);   //^
- 	set(CS41,TCCR4B);   //^
- 	clear(CS40,TCCR4B); //^
-	*/
 
  	// (OVERFLOW HERE !!!)
     OCR4A = 625; //500000/625=800Hz Target Frequency, max 1023
 
  	TCCR4A = (1 << PWM4A) | (1 << COM4A1); // CLEAR at compare with OCR4A, SET at 0x00
 	// (Why is timer4's output being sent to a pin?  We only need the compare match interrupt)
-	/*
-	set(PWM4A,TCCR4A);     //CLEAR at compare with OCR4A, SET at 0x00
- 	set(COM4A1,TCCR4A);    //^
- 	clearl(COM4A0,TCCR4A); //^
-	*/
 
  	set(TIMSK4, OCIE4A); //Interrupt TCNT4 matches OCR4A
 
@@ -268,8 +256,5 @@ void disableMotor(void){
 // -----------------------------------------------------------------------------
 ISR(PCINT0_vect){count++;} //Timer 0, pin B0
 ISR(TIMER4_COMPA_vect){ //Timer 4 Interrupt Handler: TCNT4 matches OCR4A 
-	//handle accel
-	//OCR1A+=accel;
-} 
-
+	//TODO: update duty cycle
 

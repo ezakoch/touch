@@ -38,14 +38,18 @@ Library Inclusions
 // Global Variables
 // -----------------------------------------------------------------------------
 volatile int count=0; //encoder ticks
+float error_sum = 0; // Integral sum for PID control
+
+#define ACCEL_BUFFER_ELEMENTS (MAX_ACCEL_SAMPLES * 2)
+int8_t accel_ring_buffer[ACCEL_BUFFER_ELEMENTS];  // circular buffer to hold acceleration data of at least 2 PC data packets
+int8_t *accel_buffer_start = accel_ring_buffer;  // pointer to the beginning of valid data in the circular buffer
+int8_t *accel_buffer_end = accel_ring_buffer;  // pointer to the end of valid data in the circular buffer (buffer is empty when start==end)
 
 // -----------------------------------------------------------------------------
-// Initialize Helper Functions
+// Declare Helper Functions
 // -----------------------------------------------------------------------------
 void driveMotor(int dir, float rps_desired);
 void disableMotor(void);
-
-float error_sum = 0;
 
 // -----------------------------------------------------------------------------
 // MAIN
@@ -89,10 +93,10 @@ int main(void){
  	// -----------------------------------------------------------------------------
 	// SETUP TIMER 4 INTERRUPTS TO HANDLE ACCEL PACKAGES
 	// -----------------------------------------------------------------------------
- 	TCCR4B = (1 << CS41) | (1 << CS42); //Prescalar /32= 500kHz
+ 	TCCR4B = (1 << CS41) | (1 << CS42); //Prescaler /32= 500kHz
 
 	// set Timer4's compare match value so that the match interrupt fires at 800Hz
-	TC4H = (625 >> 8)
+	TC4H = (625 >> 8);
 	OCR4A = (625 & 0xff); //500000/625=800Hz Target Frequency, max 1023
 
  	set(TIMSK4, OCIE4A); //Interrupt TCNT4 matches OCR4A
@@ -157,9 +161,25 @@ int main(void){
 			if (new_pc_data())
 			{
 				pc_data *latest_data = get_pc_data();
-				/* TODO: Store the acceleration and slip info somewhere for later use */
-			}
-		}
+				
+				for (uint8_t i = 0; i < latest_data->num_accel_samples; i++)
+				{
+					*accel_buffer_end = latest_data->accel[i];  // store this value at the end of the buffer
+					
+					accel_buffer_end++;  // move the end of the buffer up one space, wrapping around if we've hit the end of the array
+					if (accel_buffer_end >= accel_ring_buffer + ACCEL_BUFFER_ELEMENTS)
+						accel_buffer_end = accel_ring_buffer;
+					
+					// if we've run up against the start of the buffer, stop before we begin overwriting valid data
+					if ((accel_buffer_end + 1 == accel_buffer_start) ||
+						(accel_buffer_end == accel_ring_buffer + ACCEL_BUFFER_ELEMENTS - 1 &&
+						 accel_buffer_start == accel_ring_buffer))
+					{
+						break;
+					}
+				}
+			}  // end of new_pc_data() block
+		}  // end of received_pc_message() block
 	}
 }
 
@@ -251,7 +271,43 @@ void disableMotor(void){
 // -----------------------------------------------------------------------------
 // INTERRUPTS
 // -----------------------------------------------------------------------------
-ISR(PCINT0_vect){count++;} //Timer 0, pin B0
-ISR(TIMER4_COMPA_vect){ //Timer 4 Interrupt Handler: TCNT4 matches OCR4A 
-	//TODO: update duty cycle
+ISR(PCINT0_vect)
+{
+	count++;  // increment the encoder count
+}
+
+ISR(TIMER4_COMPA_vect) //Timer 4 Interrupt Handler: TCNT4 matches OCR4A
+{
+	// make sure there's valid accel data available
+	if (accel_buffer_start != accel_buffer_end)
+	{
+		const int8_t new_accel_value = *accel_buffer_start;  // get the new accel value
+		
+		// we have to cast to int32_t if adding 128 to MOTOR_PWM_COUNTS could overflow a uint16_t
+		#if MOTOR_PWM_COUNTS > (65535 - 128)
+			// update the PWM of the motor driver with the new accel value
+			int32_t new_duty = (int32_t)get_motor_raw_PWM() + (int32_t)new_accel_value;
+			if (new_duty < 0)
+				new_duty = 0;
+			if (new_duty >= 65536)
+				new_duty = 65535;
+			set_motor_raw_PWM((uint16_t)new_duty);
+		#else
+			// update the PWM of the motor driver with the new accel value
+			const uint16_t pwm = get_motor_raw_PWM();
+			if (new_accel_value < 0 && pwm < -new_accel_value)  // set PWM to 0 if adding the current PWM to the accel value would give a negative number
+				set_motor_raw_PWM(0);
+			else
+				set_motor_raw_PWM(pwm + new_accel_value);
+		#endif
+		
+		accel_buffer_start++;  // move the start of the buffer up one space, wrapping around if we've hit the end of the array
+		if (accel_buffer_start >= accel_ring_buffer + ACCEL_BUFFER_ELEMENTS)
+			accel_buffer_end = accel_ring_buffer;
+	}
+	
+	// reset the counter back to 0
+	TC4H = 0;
+	TCNT4 = 0;
+}
 

@@ -4,32 +4,32 @@
 #include <avr/io.h>
 
 #define MOTOR_PWM_FREQ 40000
-
 #define MOTOR_PWM_COUNTS (MOTOR_PWM_FREQ * 2)
 
+// This series of #ifdefs finds a good prescaler value for timer1 at compile time
 #define MOTOR_PRESCALER 1
 #if ((F_CPU / MOTOR_PRESCALER) / MOTOR_PWM_COUNTS > 65535)
-#undef MOTOR_PRESCALER
-#define MOTOR_PRESCALER 8
+	#undef MOTOR_PRESCALER
+	#define MOTOR_PRESCALER 8
 #endif
 #if ((F_CPU / MOTOR_PRESCALER) / MOTOR_PWM_COUNTS > 65535)
-#undef MOTOR_PRESCALER
-#define MOTOR_PRESCALER 64
+	#undef MOTOR_PRESCALER
+	#define MOTOR_PRESCALER 64
 #endif
 #if ((F_CPU / MOTOR_PRESCALER) / MOTOR_PWM_COUNTS > 65535)
-#undef MOTOR_PRESCALER
-#define MOTOR_PRESCALER 256
+	#undef MOTOR_PRESCALER
+	#define MOTOR_PRESCALER 256
 #endif
 #if ((F_CPU / MOTOR_PRESCALER) / MOTOR_PWM_COUNTS > 65535)
-#undef MOTOR_PRESCALER
-#define MOTOR_PRESCALER 1024
+	#undef MOTOR_PRESCALER
+	#define MOTOR_PRESCALER 1024
 #endif
 #if ((F_CPU / MOTOR_PRESCALER) / MOTOR_PWM_COUNTS > 65535)
-#error MOTOR_PWM_COUNTS is too low
+	#error MOTOR_PWM_COUNTS is too low
 #endif
 
 #if ((F_CPU / MOTOR_PRESCALER) / MOTOR_PWM_COUNTS < 100)
-#error MOTOR_PWM_COUNTS is too high
+	#error MOTOR_PWM_COUNTS is too high
 #endif
 
 typedef enum

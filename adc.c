@@ -66,6 +66,8 @@ bool init_adc (void)
 ISR (ADC_vect)
 {
 	static uint8_t adc_index = 0;
+	
+#ifdef AVR_INTERNAL_TEMP_SENSOR
 	static bool second_chip_therm_reading = false;
 	
 	if (adcIndex[adc_index] == 0xff && !second_chip_therm_reading)  // the temperature sensor requires two successive readings
@@ -74,9 +76,10 @@ ISR (ADC_vect)
 	}
 	else
 	{
+		second_chip_therm_reading = false;
+#endif
 		*adcPtrs[adc_index] = ADC & 0x3ff;  // read ADC and clip to 10-bit resolution
 		
-		second_chip_therm_reading = false;
 		adc_index++;
 	
 		if (adc_index >= NUM_ADCS)
@@ -85,23 +88,30 @@ ISR (ADC_vect)
 		// set the mux bits to use the next ADC input in the series
 		const uint8_t mux_bits = adcIndex[adc_index];
 		
+#ifdef AVR_INTERNAL_TEMP_SENSOR
 		if (mux_bits == 0xff)
 		{
 			// internal temperature sensor
 			set (ADCSRB, MUX5);
 			ADMUX = (1 << REFS0) | (1 << REFS1) | 0b00000111;
-		}
-		else if (mux_bits > 7)
+		} else
+#endif
+
+#ifdef ADCS_ABOVE_7
+		if (mux_bits > 7)
 		{
 			set (ADCSRB, MUX5);
 			ADMUX = (1 << REFS0) | ((mux_bits - 8) & 0xff);
 		}
 		else
+#endif
 		{
 			clear (ADCSRB, MUX5);
 			ADMUX = (1 << REFS0) | (mux_bits  & 0xff);
 		}
+#ifdef AVR_INTERNAL_TEMP_SENSOR
 	}
+#endif
 	
 	// start the next conversion
 	ADCSRA |= (1 << ADSC);

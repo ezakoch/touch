@@ -16,6 +16,12 @@
 
 #define NUM_ADCS 1
 
+// uncomment this define if one of the ADC readings is coming from the AVR's internal temperature sensor
+//#define AVR_INTERNAL_TEMP_SENSOR
+
+// uncomment this define if you are reading from ADC8 or above
+//#define ADCS_ABOVE_7
+
 typedef struct
 {
 	uint16_t pot;

@@ -1,32 +1,5 @@
 #include "motor_pwm.h"
 
-#define MOTOR_PWM_COUNTS (MOTOR_PWM_FREQ * 2)
-
-#define MOTOR_PRESCALER 1
-#if ((F_CPU / MOTOR_PRESCALER) / MOTOR_PWM_COUNTS > 65535)
-	#undef MOTOR_PRESCALER
-	#define MOTOR_PRESCALER 8
-#endif
-#if ((F_CPU / MOTOR_PRESCALER) / MOTOR_PWM_COUNTS > 65535)
-	#undef MOTOR_PRESCALER
-	#define MOTOR_PRESCALER 64
-#endif
-#if ((F_CPU / MOTOR_PRESCALER) / MOTOR_PWM_COUNTS > 65535)
-	#undef MOTOR_PRESCALER
-	#define MOTOR_PRESCALER 256
-#endif
-#if ((F_CPU / MOTOR_PRESCALER) / MOTOR_PWM_COUNTS > 65535)
-	#undef MOTOR_PRESCALER
-	#define MOTOR_PRESCALER 1024
-#endif
-#if ((F_CPU / MOTOR_PRESCALER) / MOTOR_PWM_COUNTS > 65535)
-	#error MOTOR_PWM_COUNTS is too low
-#endif
-
-#if ((F_CPU / MOTOR_PRESCALER) / MOTOR_PWM_COUNTS < 100)
-	#error MOTOR_PWM_COUNTS is too high
-#endif
-
 static motor_pwm_channel output;
 
 
@@ -143,4 +116,14 @@ uint8_t get_motor_duty_pct (void)
 uint8_t get_motor_duty_8bit (void)
 {
 	return (uint32_t)get_motor_duty() * 256ul / (uint32_t)ICR1;
+}
+
+uint16_t get_motor_raw_PWM (void)
+{
+	return get_motor_duty();
+}
+
+void set_motor_raw_PWM (const uint16_t pwm)
+{
+	return set_motor_duty(pwm);
 }

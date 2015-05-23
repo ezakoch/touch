@@ -125,5 +125,5 @@ uint16_t get_motor_raw_PWM (void)
 
 void set_motor_raw_PWM (const uint16_t pwm)
 {
-	return set_motor_duty(pwm);
+	set_motor_duty(pwm);
 }

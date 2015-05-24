@@ -285,7 +285,7 @@ ISR(TIMER4_COMPA_vect) //Timer 4 Interrupt Handler: TCNT4 matches OCR4A
 	{
 		const int16_t new_accel_value = (int16_t)(*accel_buffer_start) * ACCEL_SCALE;  // get the new accel value, multiplied by our scaling factor
 		
-		// we have to cast to int32_t if adding 128 to MOTOR_PWM_COUNTS could overflow a uint16_t
+		// we have to cast to int32_t if adding acceleration to MOTOR_PWM_COUNTS could overflow a uint16_t
 		#if MOTOR_PWM_COUNTS > (65535 - (128 * ACCEL_SCALE))
 			// update the PWM of the motor driver with the new accel value
 			int32_t new_duty = (int32_t)get_motor_raw_PWM() + (int32_t)new_accel_value;

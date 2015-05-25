@@ -187,6 +187,8 @@ int main(void){
 //  PID CONTORLLER AND MOTOR DRIVER
 // -----------------------------------------------------------------------------
 
+static uint16_t motor_control_pwm = 0;  // value to hold the desired PWM from the motor control loop (actual motor PWM is this plus acceleration)
+
 void driveMotor (int dir, float rps_desired){
 	static uint64_t prev_time = 0;
 	static float prev_error = 0;
@@ -249,6 +251,7 @@ void driveMotor (int dir, float rps_desired){
 		duty_cycle = 0.0;
 	
 	set_motor_duty_pct((uint8_t)duty_cycle);
+	motor_control_pwm = get_motor_raw_PWM();  // store the motor PWM that was set by the control loop, so it can be modified by the acceleration interrupt
 	
 	#ifdef DEBUG
 		m_usb_tx_string("duty_cycle: ");
@@ -276,7 +279,7 @@ ISR(PCINT0_vect)
 	count++;  // increment the encoder count
 }
 
-ISR(TIMER4_COMPA_vect) //Timer 4 Interrupt Handler: TCNT4 matches OCR4A
+ISR(TIMER4_COMPA_vect) //Timer 4 Interrupt Handler: TCNT4 matches OCR4A, update acceleration value
 {
 	#define ACCEL_SCALE 1
 	
@@ -288,24 +291,28 @@ ISR(TIMER4_COMPA_vect) //Timer 4 Interrupt Handler: TCNT4 matches OCR4A
 		// we have to cast to int32_t if adding acceleration to MOTOR_PWM_COUNTS could overflow a uint16_t
 		#if MOTOR_PWM_COUNTS > (65535 - (128 * ACCEL_SCALE))
 			// update the PWM of the motor driver with the new accel value
-			int32_t new_duty = (int32_t)get_motor_raw_PWM() + (int32_t)new_accel_value;
-			if (new_duty < 0)
-				new_duty = 0;
-			if (new_duty >= 65536)
-				new_duty = 65535;
-			set_motor_raw_PWM((uint16_t)new_duty);
+			int32_t new_pwm = (int32_t)motor_control_pwm + (int32_t)new_accel_value;
+			if (new_pwm < 0)
+				new_pwm = 0;
+			if (new_pwm >= 65536)
+				new_pwm = 65535;
+			set_motor_raw_PWM((uint16_t)new_pwm);
 		#else
 			// update the PWM of the motor driver with the new accel value
-			const uint16_t pwm = get_motor_raw_PWM();
-			if (new_accel_value < 0 && pwm < -new_accel_value)  // set PWM to 0 if adding the current PWM to the accel value would give a negative number
-				set_motor_raw_PWM(0);
+			if (new_accel_value < 0 && motor_control_pwm < -new_accel_value)  // set PWM to 0 if adding the current PWM to the accel value would give a negative number
+				set_motor_raw_PWM(0);  // (THIS CODE MUST BE UPDATED WHEN WE START DRIVING THE MOTOR BACKWARDS AND FORWARDS)
 			else
-				set_motor_raw_PWM(pwm + new_accel_value);
+				set_motor_raw_PWM(motor_control_pwm + new_accel_value);
 		#endif
 		
 		accel_buffer_start++;  // move the start of the buffer up one space, wrapping around if we've hit the end of the array
 		if (accel_buffer_start >= accel_ring_buffer + ACCEL_BUFFER_ELEMENTS)
 			accel_buffer_end = accel_ring_buffer;
+	}
+	else
+	{
+		// we've run out of valid acceleration data, reset to the unaltered PWM from the motor control loop
+		set_motor_raw_PWM(motor_control_pwm);
 	}
 	
 	// reset the counter back to 0

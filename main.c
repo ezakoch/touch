@@ -31,7 +31,7 @@ Library Inclusions
 // -----------------------------------------------------------------------------
 // Debugging
 // -----------------------------------------------------------------------------
-#define DEBUG
+// #define DEBUG
 // #define DEBUG_TEMP
 
 // -----------------------------------------------------------------------------
@@ -40,9 +40,11 @@ Library Inclusions
 volatile int count=0; //encoder ticks
 float error_sum = 0; // Integral sum for PID control
 
-#define ACCEL_BUFFER_ELEMENTS (MAX_ACCEL_SAMPLES * 2)
-int8_t accel_ring_buffer[ACCEL_BUFFER_ELEMENTS];  // circular buffer to hold acceleration data of at least 2 PC data packets
+#define US_PER_ACCEL_SAMPLE 1250
+#define ACCEL_BUFFER_ELEMENTS (MAX_ACCEL_SAMPLES * 3)
+int8_t accel_ring_buffer[ACCEL_BUFFER_ELEMENTS];  // circular buffer to hold acceleration data of multiple PC data packets
 int8_t *accel_buffer_start = accel_ring_buffer;  // pointer to the beginning of valid data in the circular buffer
+uint64_t accel_buffer_end_us = 0;  // timestamp for the end of the currently stored acceleration data
 int8_t *accel_buffer_end = accel_ring_buffer;  // pointer to the end of valid data in the circular buffer (buffer is empty when start==end)
 
 // -----------------------------------------------------------------------------
@@ -160,24 +162,77 @@ int main(void){
 			
 			if (new_pc_data())
 			{
-				pc_data *latest_data = get_pc_data();
+				const pc_data *const latest_data = get_pc_data();
 				
-				for (uint8_t i = 0; i < latest_data->num_accel_samples; i++)
+				if (latest_data->num_accel_samples > 0)
 				{
-					*accel_buffer_end = latest_data->accel[i];  // store this value at the end of the buffer
+					/* We've received new acceleration data.  Now we need to ensure that the new data gets smoothly
+					 * incorporated into the existing data stream, despite the inevitable difference in clock
+					 * speeds between the sensor and actuator.
+					 */
 					
-					accel_buffer_end++;  // move the end of the buffer up one space, wrapping around if we've hit the end of the array
-					if (accel_buffer_end >= accel_ring_buffer + ACCEL_BUFFER_ELEMENTS)
-						accel_buffer_end = accel_ring_buffer;
-					
-					// if we've run up against the start of the buffer, stop before we begin overwriting valid data
-					if ((accel_buffer_end + 1 == accel_buffer_start) ||
-						(accel_buffer_end == accel_ring_buffer + ACCEL_BUFFER_ELEMENTS - 1 &&
-						 accel_buffer_start == accel_ring_buffer))
+					/*
+					// get the number of used spaces in the acceleration buffer
+					uint16_t buffer_filled_slots = 0;
+					cli();
+					const int8_t *buffer_start = accel_buffer_start;
+					sei();
+					while (buffer_start != accel_buffer_end)
 					{
-						break;
+						buffer_filled_slots++;
+						
+						buffer_start++;
+						if (buffer_start >= accel_ring_buffer + ACCEL_BUFFER_ELEMENTS)
+							buffer_start = accel_ring_buffer;
 					}
-				}
+					
+					// get the number of empty spaces in the buffer
+					const uint16_t buffer_empty_slots = ACCEL_BUFFER_ELEMENTS - buffer_filled_slots;
+					
+					static int64_t adjust_us = 0;
+					
+					// take the difference between time of the last stored sample in our accel buffer and the time of the first incoming sample
+					const int64_t data_time_offset_us = (int64_t)latest_data->timestamp_us - (int64_t)accel_buffer_end_us + adjust_us;
+					const int64_t buffer_offset_elements = data_time_offset_us / US_PER_ACCEL_SAMPLE;
+					
+					if (buffer_offset_elements + latest_data->num_accel_samples >= buffer_empty_slots)
+					{  // there's a large discontinuity between data samples that would put our newly-received data outside the buffer bounds
+						// TODO: change adjust_us so that large time disparities (eg, one system powered on much earlier/later than the other) disappear
+					}
+					
+					// TODO: add the new data to the appropriate place
+					if (offset_elements > 0)
+					{
+						// There is a gap between the last sample of our current buffer and the first sample of the new data.
+						// TODO: Interpolate between them to fill the gap
+					}
+					else if (offset_elements < 0)
+					{
+						// The new data overlaps with data in our current buffer.
+						// TODO: Average the overlapping data
+					}
+					*/
+					
+					// UNTIL THE ABOVE CODE IS FINISHED: Just append the new data immediately after the last entry of the previous packet
+					
+					for (uint8_t i = 0; i < latest_data->num_accel_samples; i++)
+					{
+						*accel_buffer_end = latest_data->accel[i];  // store this value at the end of the buffer
+						
+						accel_buffer_end++;  // move the end of the buffer up one space, wrapping around if we've hit the end of the array
+						if (accel_buffer_end >= accel_ring_buffer + ACCEL_BUFFER_ELEMENTS)
+							accel_buffer_end = accel_ring_buffer;
+						
+						// buffer overrun condition
+						// if we've run up against the start of the buffer, stop before we begin overwriting valid data
+						if ((accel_buffer_end + 1 == accel_buffer_start) ||
+							(accel_buffer_end == accel_ring_buffer + ACCEL_BUFFER_ELEMENTS - 1 &&
+							 accel_buffer_start == accel_ring_buffer))
+						{
+							break;
+						}
+					}
+				}  // end of accel_samples > 0 block
 			}  // end of new_pc_data() block
 		}  // end of received_pc_message() block
 	}
@@ -310,9 +365,12 @@ ISR(TIMER4_COMPA_vect) //Timer 4 Interrupt Handler: TCNT4 matches OCR4A, update 
 			accel_buffer_end = accel_ring_buffer;
 	}
 	else
-	{
+	{  // buffer underrun condition
 		// we've run out of valid acceleration data, reset to the unaltered PWM from the motor control loop
 		set_motor_raw_PWM(motor_control_pwm);
+		
+		// Alternatively, we could continue using the most recent accel value.
+		// TODO: Either way, we should do some smoothing once new data arrives, to prevent the discontinuity from being felt too much
 	}
 	
 	// reset the counter back to 0

@@ -225,7 +225,7 @@ int main(void){
 					const int64_t buffer_offset_elements = adjust_elements + (data_time_offset_us / US_PER_ACCEL_SAMPLE);
 					
 					if (buffer_offset_elements + latest_data->num_accel_samples >= buffer_empty_slots ||  // new data extends beyond what the buffer can hold
-					    buffer_offset_elements < -buffer_filled_slots)                                    // new data starts before our current sample
+					    buffer_offset_elements + latest_data->num_accel_samples <= 0)                     // new data doesn't even get beyond our current sample
 					{  // there's a large discontinuity between data samples that would put our newly-received data outside the buffer bounds
 						// TODO: change adjust_elements so that large time disparities (eg, one system powered on much earlier/later than the other) disappear
 					}

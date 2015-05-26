@@ -218,29 +218,37 @@ int main(void){
 					// get the number of empty spaces in the buffer
 					const int16_t buffer_empty_slots = ACCEL_BUFFER_ELEMENTS - buffer_filled_slots;
 					
-					static int64_t adjust_elements = 0;
+					static int64_t adjust_us = 0;
 					
 					// take the difference between time of the last stored sample in our accel buffer and the time of the first incoming sample
-					const int64_t data_time_offset_us = (int64_t)latest_data->timestamp_us - (int64_t)accel_buffer_end_us;
-					const int64_t buffer_offset_elements = adjust_elements + (data_time_offset_us / US_PER_ACCEL_SAMPLE);
+					const int64_t data_time_offset_us = (int64_t)latest_data->timestamp_us - (int64_t)accel_buffer_end_us + adjust_us;
+					const int64_t buffer_offset_elements = data_time_offset_us / US_PER_ACCEL_SAMPLE;
 					
 					if (buffer_offset_elements + latest_data->num_accel_samples >= buffer_empty_slots ||  // new data extends beyond what the buffer can hold
 					    buffer_offset_elements + latest_data->num_accel_samples <= 0)                     // new data doesn't even get beyond our current sample
 					{  // there's a large discontinuity between data samples that would put our newly-received data outside the buffer bounds
-						// TODO: change adjust_elements so that large time disparities (eg, one system powered on much earlier/later than the other) disappear
+						// TODO: change adjust_us so that large time disparities (eg, one system powered on much earlier/later than the other) disappear
 					}
 					
 					// TODO: add the new data to the appropriate place
 					if (offset_elements > 0)
 					{
 						// There is a gap between the last sample of our current buffer and the first sample of the new data.
-						// TODO: Interpolate between them to fill the gap
+						// TODO: Interpolate between them to fill the gap, then call the "append data to the end" code below
 					}
 					else if (offset_elements < 0)
 					{
 						// The new data overlaps with data in our current buffer.
-						// TODO: Average the overlapping data
+						// TODO: Average the overlapping data, then call the "append data to the end" code on what doesn't overlap
 					}
+					else
+					{
+						// No gap or overlap, append the new data immediately after the existing data
+						// TODO: Call the "append data to the end" code below
+					}
+					
+					// update the timestamp of the last acceleration sample
+					accel_buffer_end_us = adjust_us + latest_data->timestamp_us + (latest_data->num_accel_samples * US_PER_ACCEL_SAMPLE);
 					*/
 					
 					// UNTIL THE ABOVE CODE IS FINISHED: Just append the new data immediately after the last entry of the previous packet

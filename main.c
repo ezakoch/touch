@@ -47,6 +47,23 @@ int8_t *accel_buffer_start = accel_ring_buffer;  // pointer to the beginning of 
 uint64_t accel_buffer_end_us = 0;  // timestamp for the end of the currently stored acceleration data
 int8_t *accel_buffer_end = accel_ring_buffer;  // pointer to the end of valid data in the circular buffer (buffer is empty when start==end)
 
+// Debugging: use 3 LEDs to display the current status of the acceleration buffer
+// Green = OK
+// Yellow = Buffer underrun (bad)
+// Red = Buffer overrun (worse)
+#define ACCEL_OVERRUN_LED_DDR  DDRD
+#define ACCEL_OVERRUN_LED_PORT PORTD
+#define ACCEL_OVERRUN_LED_NUM  7
+
+#define ACCEL_OK_LED_DDR  DDRD
+#define ACCEL_OK_LED_PORT PORTD
+#define ACCEL_OK_LED_NUM  6
+
+#define ACCEL_UNDERRUN_LED_DDR  DDRD
+#define ACCEL_UNDERRUN_LED_PORT PORTD
+#define ACCEL_UNDERRUN_LED_NUM  5
+
+
 // -----------------------------------------------------------------------------
 // Declare Helper Functions
 // -----------------------------------------------------------------------------
@@ -84,7 +101,15 @@ int main(void){
 	init_timer();
 	init_motor_pwm (MOTOR_CHANNEL_1B);
 	init_adc();
-
+	
+	// debug: initialize acceleration data indicator LEDs
+	clear (ACCEL_OVERRUN_LED_PORT,  ACCEL_OVERRUN_LED_NUM);
+	clear (ACCEL_OK_LED_PORT,       ACCEL_OK_LED_NUM);
+	clear (ACCEL_UNDERRUN_LED_PORT, ACCEL_UNDERRUN_LED_NUM);
+	set (ACCEL_OVERRUN_LED_DDR,  ACCEL_OVERRUN_LED_NUM);
+	set (ACCEL_OK_LED_DDR,       ACCEL_OK_LED_NUM);
+	set (ACCEL_UNDERRUN_LED_DDR, ACCEL_UNDERRUN_LED_NUM);
+	
 	// -----------------------------------------------------------------------------
 	// SETUP INTERRUPTS: PIN CHANGE PCINT0 pin D0
 	// -----------------------------------------------------------------------------
@@ -169,6 +194,9 @@ int main(void){
 					/* We've received new acceleration data.  Now we need to ensure that the new data gets smoothly
 					 * incorporated into the existing data stream, despite the inevitable difference in clock
 					 * speeds between the sensor and actuator.
+					 *
+					 * (A good way to test this code will be to modify the GUI code to either duplicate or drop
+					 *  roughly 1/3 of the acceleration samples it receives from the sensor)
 					 */
 					
 					/*
@@ -215,6 +243,10 @@ int main(void){
 					
 					// UNTIL THE ABOVE CODE IS FINISHED: Just append the new data immediately after the last entry of the previous packet
 					
+					clear (ACCEL_OVERRUN_LED_PORT,  ACCEL_OVERRUN_LED_NUM);
+					set   (ACCEL_OK_LED_PORT,       ACCEL_OK_LED_NUM);
+					clear (ACCEL_UNDERRUN_LED_PORT, ACCEL_UNDERRUN_LED_NUM);
+					
 					for (uint8_t i = 0; i < latest_data->num_accel_samples; i++)
 					{
 						*accel_buffer_end = latest_data->accel[i];  // store this value at the end of the buffer
@@ -229,6 +261,9 @@ int main(void){
 							(accel_buffer_end == accel_ring_buffer + ACCEL_BUFFER_ELEMENTS - 1 &&
 							 accel_buffer_start == accel_ring_buffer))
 						{
+							set   (ACCEL_OVERRUN_LED_PORT,  ACCEL_OVERRUN_LED_NUM);
+							clear (ACCEL_OK_LED_PORT,       ACCEL_OK_LED_NUM);
+							clear (ACCEL_UNDERRUN_LED_PORT, ACCEL_UNDERRUN_LED_NUM);
 							break;
 						}
 					}
@@ -366,6 +401,10 @@ ISR(TIMER4_COMPA_vect) //Timer 4 Interrupt Handler: TCNT4 matches OCR4A, update 
 	}
 	else
 	{  // buffer underrun condition
+		clear (ACCEL_OVERRUN_LED_PORT,  ACCEL_OVERRUN_LED_NUM);
+		clear (ACCEL_OK_LED_PORT,       ACCEL_OK_LED_NUM);
+		set   (ACCEL_UNDERRUN_LED_PORT, ACCEL_UNDERRUN_LED_NUM);
+		
 		// we've run out of valid acceleration data, reset to the unaltered PWM from the motor control loop
 		set_motor_raw_PWM(motor_control_pwm);
 		

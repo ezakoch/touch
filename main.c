@@ -67,8 +67,8 @@ int8_t *accel_buffer_end = accel_ring_buffer;  // pointer to the end of valid da
 // -----------------------------------------------------------------------------
 // Declare Helper Functions
 // -----------------------------------------------------------------------------
-void driveMotor(int dir, float rps_desired);
-void disableMotor(void);
+static void driveMotor(int dir, float rps_desired);
+static void disableMotor(void);
 
 // -----------------------------------------------------------------------------
 // MAIN
@@ -201,7 +201,7 @@ int main(void){
 					
 					/*
 					// get the number of used spaces in the acceleration buffer
-					uint16_t buffer_filled_slots = 0;
+					int16_t buffer_filled_slots = 0;
 					cli();
 					const int8_t *buffer_start = accel_buffer_start;
 					sei();
@@ -213,19 +213,21 @@ int main(void){
 						if (buffer_start >= accel_ring_buffer + ACCEL_BUFFER_ELEMENTS)
 							buffer_start = accel_ring_buffer;
 					}
+					// by the time this loop finishes, there might be one fewer space used, but stick with the more pessimistic value
 					
 					// get the number of empty spaces in the buffer
-					const uint16_t buffer_empty_slots = ACCEL_BUFFER_ELEMENTS - buffer_filled_slots;
+					const int16_t buffer_empty_slots = ACCEL_BUFFER_ELEMENTS - buffer_filled_slots;
 					
-					static int64_t adjust_us = 0;
+					static int64_t adjust_elements = 0;
 					
 					// take the difference between time of the last stored sample in our accel buffer and the time of the first incoming sample
-					const int64_t data_time_offset_us = (int64_t)latest_data->timestamp_us - (int64_t)accel_buffer_end_us + adjust_us;
-					const int64_t buffer_offset_elements = data_time_offset_us / US_PER_ACCEL_SAMPLE;
+					const int64_t data_time_offset_us = (int64_t)latest_data->timestamp_us - (int64_t)accel_buffer_end_us;
+					const int64_t buffer_offset_elements = adjust_elements + (data_time_offset_us / US_PER_ACCEL_SAMPLE);
 					
-					if (buffer_offset_elements + latest_data->num_accel_samples >= buffer_empty_slots)
+					if (buffer_offset_elements + latest_data->num_accel_samples >= buffer_empty_slots ||  // new data extends beyond what the buffer can hold
+					    buffer_offset_elements < -buffer_filled_slots)                                    // new data starts before our current sample
 					{  // there's a large discontinuity between data samples that would put our newly-received data outside the buffer bounds
-						// TODO: change adjust_us so that large time disparities (eg, one system powered on much earlier/later than the other) disappear
+						// TODO: change adjust_elements so that large time disparities (eg, one system powered on much earlier/later than the other) disappear
 					}
 					
 					// TODO: add the new data to the appropriate place
@@ -279,7 +281,7 @@ int main(void){
 
 static uint16_t motor_control_pwm = 0;  // value to hold the desired PWM from the motor control loop (actual motor PWM is this plus acceleration)
 
-void driveMotor (int dir, float rps_desired){
+static void driveMotor (int dir, float rps_desired){
 	static uint64_t prev_time = 0;
 	static float prev_error = 0;
 	
@@ -357,7 +359,7 @@ void driveMotor (int dir, float rps_desired){
 // -----------------------------------------------------------------------------
 //  DISABLE MOTORS
 // -----------------------------------------------------------------------------
-void disableMotor(void){
+static void disableMotor(void){
 	set_motor_duty_pct(0);
 	error_sum = 0;  // prevent windup when disabled
 }

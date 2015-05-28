@@ -173,23 +173,29 @@ void process_pc_message (void)
 				
 				// decode the base64 string in-place to re-use the message buffer
 				// (will work because the base64 string is always longer than what it encoded)
-				uint8_t *decoded_end_ptr = message;
+				uint8_t *message_begin = message + 2;  // skip past the "DA" identifier
+				uint8_t *decoded_end_ptr = message_begin;
 				
 				{
 					bool decode_working = true;
 				
 					base64_begin_decode_stream();
-					for (uint16_t i = 0; i < message_len && decode_working; i++)
-						decode_working = base64_decode_stream (&decoded_end_ptr, (char)message[i]);
+					for (uint16_t i = 0; i < (message_len - 2) && decode_working; i++)
+						decode_working = base64_decode_stream (&decoded_end_ptr, *(message_begin + i));
 				}
 				
-				const uint16_t decoded_len = decoded_end_ptr - message;
+				const uint16_t decoded_len = decoded_end_ptr - message_begin;
+				
 				if (decoded_len != sizeof(pc_data))
 				{
 					m_usb_tx_string (":DA!");  // send "invalid data" response
+					m_usb_tx_int ((int)decoded_len);
+					m_usb_tx_string ("vs");
+					m_usb_tx_int ((int)sizeof(pc_data));
+					m_usb_tx_char (',');
 					if (decoded_len >= sizeof(uint64_t))
 					{  // include the data's timestamp, if we got that much of it
-						const uint64_t *out_ptr = (uint64_t*)message;
+						const uint64_t *out_ptr = (uint64_t*)message_begin;
 						m_usb_tx_u64 (*out_ptr);
 					}
 					m_usb_tx_char (';');
@@ -197,11 +203,16 @@ void process_pc_message (void)
 				else
 				{
 					// copy the decoded data into our waiting structure
-					pc_data *pc_ptr = (pc_data*)message;
+					pc_data *pc_ptr = (pc_data*)message_begin;
 					latest_pc_data = *pc_ptr;
 					new_data = true;
 					
-					m_usb_tx_string (":DAOK;");  // debug: indicate successful message
+					// debug: indicate successful message and write the bytes received
+					m_usb_tx_string (":DAOK");
+					m_usb_tx_u64(latest_pc_data.timestamp_us);
+					m_usb_tx_string(", ");
+					m_usb_tx_int((int)latest_pc_data.num_accel_samples);
+					m_usb_tx_string(";");
 				}
 			}
             break;
